@@ -1,4 +1,48 @@
-# Copilot Instructions — AiTemplateAutomation
+# Copilot Instructions — {{PROJECT_NAME}}
+
+## Before Creating Any New Code — Mandatory Checks
+
+> **These checks are required before creating any class, method, or piece of logic.**
+
+### 1. Check Existing Skills First
+
+Before implementing any functionality, inspect every skill that already exists in the project:
+
+| Skill | Responsibility |
+|-------|---------------|
+| `BrowserSkill` | Browser automation (navigation, clicks, form input, element queries) |
+| `ApiSkill` | Generic HTTP calls via `HttpClient` |
+| `RestApiSkill` | Authenticated REST calls backed by `Gbm.Automation.Core` |
+| `DatabaseSkill` | SQL query execution, scalar reads, and result mapping |
+| `SchemaInspectionSkill` | Database schema discovery (tables, columns, indexes) |
+
+**Rules:**
+- If the functionality already exists in a skill → call that skill; do **not** add a duplicate method.
+- If the functionality is *related* to an existing skill → extend that skill rather than creating a new one.
+- If a genuinely new domain is needed → create a new `IXxxSkill` interface + `XxxSkill` implementation and register it in `SkillRegistry.cs`.
+
+### 2. Check `Gbm.Automation.Core` Before Writing Infrastructure Code
+
+`Gbm.Automation.Core` is a private NuGet package that provides ready-made infrastructure. Always verify it is not available before rolling your own implementation:
+
+**Key namespaces / types to check:**
+- Database connectivity and query helpers (`DbConnectionFactory`, query builders)
+- AWS client factories and credential helpers (`AwsClientFactory`, `SecretsManagerWrapper`)
+- REST client wrappers and authentication handlers
+- Common DTOs and result models
+
+**How to check:**
+1. Search the object browser / IntelliSense under `Gbm.Automation.Core.*`.
+2. If the type or helper exists → import and reuse it; do not duplicate the logic.
+3. If the type does not exist → implement it locally and consider whether it belongs in a Skill.
+
+### 3. No Duplicate Logic
+
+- **Do not** copy-paste code between skills, step definitions, or drivers.
+- **Do not** re-implement framework utilities that are already in `Microsoft.SemanticKernel`, `Dapper`, `RestSharp`, or `Gbm.Automation.Core`.
+- Shared utilities that are not skill-specific belong in `Drivers/` (context holders, factories, settings).
+
+---
 
 ## C# Code Style & StyleCop Compliance
 
@@ -20,7 +64,7 @@ All `.cs` files must follow this exact structure:
 using System;                  // ← using directives ALWAYS outside the namespace (SA1200)
 using Third.Party.Namespace;
 
-namespace AiTemplateAutomation.SubFolder;  // ← file-scoped namespace (no braces)
+namespace {{PROJECT_NAME}}.SubFolder;  // ← file-scoped namespace (no braces)
 
 /// <summary>
 /// One-sentence description of what this class does.

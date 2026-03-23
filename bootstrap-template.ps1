@@ -137,6 +137,7 @@ New-DirectoryIfMissing (Join-Path $projectRoot "Features")
 New-DirectoryIfMissing (Join-Path $projectRoot "Prompts")
 New-DirectoryIfMissing (Join-Path $projectRoot "Scripts")
 New-DirectoryIfMissing (Join-Path $projectRoot "Tests")
+New-DirectoryIfMissing (Join-Path $repoRoot ".github")
 
 $tokens = @{
     PROJECT_NAME = $ProjectName
@@ -226,6 +227,8 @@ Write-FileSafely -Path (Join-Path $projectRoot "Models\DatabaseQueryResultDto.cs
 Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\OrchestratorCommand.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\OrchestratorCommand.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\AiOrchestratorSteps.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\AiOrchestratorSteps.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "Prompts\orchestrator.skprompt.txt") -Content (Get-TemplateContent -RelativePath "Prompts\orchestrator.skprompt.txt.template" -Tokens $tokens) -AllowOverwrite:$Force
+
+Write-FileSafely -Path (Join-Path $repoRoot ".github\copilot-instructions.md") -Content (Get-TemplateContent -RelativePath ".github\copilot-instructions.md.template" -Tokens $tokens) -AllowOverwrite:$Force
 
 $featureTemplate = if ($IncludeDatabase) { "Features\Sample.database.feature.template" } else { "Features\Sample.feature.template" }
 Write-FileSafely -Path (Join-Path $projectRoot "Features\Sample.feature") -Content (Get-TemplateContent -RelativePath $featureTemplate -Tokens $tokens) -AllowOverwrite:$Force
