@@ -238,7 +238,9 @@ if ($UsePrivatePackages) {
 
 if ($IncludeDatabase) {
     Write-FileSafely -Path (Join-Path $projectRoot "Skills\DatabaseSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\DatabaseSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Skills\SchemaInspectionSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\SchemaInspectionSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\DatabaseStepDefinitions.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\DatabaseStepDefinitions.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\SchemaInspectionStepDefinitions.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\SchemaInspectionStepDefinitions.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 }
 
 Write-Section "Generando solucion"
