@@ -1,0 +1,75 @@
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Skills;
+using Microsoft.SemanticKernel;
+using Reqnroll;
+using Reqnroll.BoDi;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Configures per-scenario dependencies and plugin registration.
+/// </summary>
+[Binding]
+public class TestLifecycleHooks
+{
+    private readonly IObjectContainer _container;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestLifecycleHooks"/> class.
+    /// </summary>
+    /// <param name="container">The Reqnroll DI container for the active scenario.</param>
+    public TestLifecycleHooks(IObjectContainer container)
+    {
+        _container = container;
+    }
+
+    /// <summary>
+    /// Builds and registers scenario services before each test scenario.
+    /// </summary>
+    [BeforeScenario]
+    public void SetupScenario()
+    {
+        var config = new ConfigurationDriver();
+        var aiContext = new AiContext();
+
+        _container.RegisterInstanceAs(config);
+        _container.RegisterInstanceAs(aiContext);
+
+        var builder = Kernel.CreateBuilder();
+        if (config.AiMode.Equals("azure", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.AddAzureOpenAIChatCompletion(
+                deploymentName: config.AzureDeployment,
+                endpoint: config.AzureEndpoint,
+                apiKey: config.AzureApiKey,
+                modelId: config.AzureModelId);
+        }
+        else
+        {
+            builder.AddOpenAIChatCompletion(
+                modelId: config.OpenAiModelId,
+                apiKey: config.OpenAiApiKey);
+        }
+
+        var kernel = builder.Build();
+        _container.RegisterInstanceAs(kernel);
+
+        var browserSkill = new BrowserSkill(aiContext);
+        var apiSkill = new ApiSkill(aiContext);
+
+        kernel.ImportPluginFromObject(browserSkill, "Browser");
+        kernel.ImportPluginFromObject(apiSkill, "Api");
+
+        _container.RegisterInstanceAs(browserSkill);
+        _container.RegisterInstanceAs(apiSkill);
+    }
+
+    /// <summary>
+    /// Executes scenario teardown tasks.
+    /// </summary>
+    [AfterScenario]
+    public void TeardownScenario()
+    {
+        // Release UI drivers, open connections, or other external resources here.
+    }
+}

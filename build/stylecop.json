@@ -1,0 +1,13 @@
+﻿{
+    "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
+    "settings": {
+        "documentationRules": {
+            "companyName": "GBM",
+            "copyrightText": "GBM GRUPO BURS\u00c1TIL MEXICANO, S.A DE C.V., CASA DE BOLSA",
+            "xmlHeader": true
+        },
+        "orderingRules": {
+            "usingDirectivesPlacement": "outsideNamespace"
+        }
+    }
+}

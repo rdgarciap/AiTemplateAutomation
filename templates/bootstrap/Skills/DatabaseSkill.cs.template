@@ -1,0 +1,102 @@
+using System.ComponentModel;
+using Dapper;
+using {{PROJECT_NAME}}.Drivers;
+using Gbm.Automation.Core.DB.Abstractions;
+using Gbm.Automation.Core.Utils.Common;
+using Microsoft.SemanticKernel;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Provides database execution functions for deterministic test steps.
+/// </summary>
+public class DatabaseSkill
+{
+    private readonly AiContext _aiContext;
+    private readonly IDbClient _dbClient;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseSkill"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="dbClient">Database client abstraction.</param>
+    public DatabaseSkill(AiContext aiContext, IDbClient dbClient)
+    {
+        _aiContext = aiContext;
+        _dbClient = dbClient;
+    }
+
+    [KernelFunction("ExecuteQuery")]
+    [Description("Executes a read-only SQL SELECT query and returns the results as JSON.")]
+    /// <summary>
+    /// Executes a SQL query and returns rows as JSON.
+    /// </summary>
+    /// <param name="query">The SQL query text.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>Serialized rows as JSON.</returns>
+    public async Task<string> ExecuteQueryAsync(string query, DynamicParameters? parameters = null)
+    {
+        var rows = await _dbClient.QueryAsync<dynamic>(query, parameters);
+        var result = JsonUtil.SerializeObject(rows);
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Executes a SQL command and returns affected row count.
+    /// </summary>
+    /// <param name="sql">The SQL command text.</param>
+    /// <param name="parameters">Optional command parameters.</param>
+    /// <returns>A JSON payload containing affected rows.</returns>
+    public async Task<string> ExecuteCommandAsync(string sql, DynamicParameters? parameters = null)
+    {
+        var affected = await _dbClient.ExecuteAsync(sql, parameters);
+        var result = $"{{\"affectedRows\": {affected}}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Executes a stored procedure that returns rows.
+    /// </summary>
+    /// <param name="spName">Stored procedure name.</param>
+    /// <param name="parameters">Optional stored procedure parameters.</param>
+    /// <returns>Serialized rows as JSON.</returns>
+    public async Task<string> ExecuteStoredProcedureAsync(string spName, DynamicParameters? parameters = null)
+    {
+        var rows = await _dbClient.QueryAsync<dynamic>(spName, parameters);
+        var result = JsonUtil.SerializeObject(rows);
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Executes a non-query stored procedure.
+    /// </summary>
+    /// <param name="spName">Stored procedure name.</param>
+    /// <param name="parameters">Optional stored procedure parameters.</param>
+    /// <returns>A JSON payload containing affected rows.</returns>
+    public async Task<string> ExecuteNonQueryStoredProcedureAsync(string spName, DynamicParameters? parameters = null)
+    {
+        var affected = await _dbClient.ExecuteNonQueryAsync(spName, parameters ?? new DynamicParameters());
+        var result = $"{{\"affectedRows\": {affected}}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Executes a SQL script file.
+    /// </summary>
+    /// <param name="relativePath">Relative or absolute script path.</param>
+    /// <returns>A JSON payload containing total affected rows.</returns>
+    public async Task<string> ExecuteScriptFileAsync(string relativePath)
+    {
+        var fullPath = Path.IsPathRooted(relativePath)
+            ? relativePath
+            : Path.Combine(AppContext.BaseDirectory, relativePath);
+        var totalAffected = await _dbClient.ExecuteScriptFileAsync(fullPath);
+        var result = $"{{\"totalAffectedRows\": {totalAffected}}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+}

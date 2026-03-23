@@ -1,0 +1,204 @@
+using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace {{PROJECT_NAME}}.Models;
+
+/// <summary>
+/// Represents a generic database query response as a normalized list of rows.
+/// </summary>
+public class DatabaseQueryResultDto
+{
+    /// <summary>
+    /// Gets the parsed rows from the query payload.
+    /// </summary>
+    public List<DatabaseQueryRowDto> Rows { get; } = new();
+
+    /// <summary>
+    /// Gets the number of parsed rows.
+    /// </summary>
+    public int Count => Rows.Count;
+
+    /// <summary>
+    /// Parses a raw JSON payload returned by database skills.
+    /// </summary>
+    /// <param name="json">Raw JSON payload from <c>AiContext.LastSkillResult</c>.</param>
+    /// <returns>A normalized <see cref="DatabaseQueryResultDto"/> instance.</returns>
+    public static DatabaseQueryResultDto FromJson(string? json)
+    {
+        var dto = new DatabaseQueryResultDto();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return dto;
+        }
+
+        JToken token;
+        try
+        {
+            token = JToken.Parse(json);
+        }
+        catch
+        {
+            return dto;
+        }
+
+        if (token.Type == JTokenType.Array)
+        {
+            foreach (var item in token)
+            {
+                if (item is JObject rowObject)
+                {
+                    dto.Rows.Add(new DatabaseQueryRowDto(rowObject));
+                }
+            }
+
+            return dto;
+        }
+
+        if (token is JObject singleObject)
+        {
+            dto.Rows.Add(new DatabaseQueryRowDto(singleObject));
+        }
+
+        return dto;
+    }
+
+    /// <summary>
+    /// Deserializes the raw JSON array directly into a typed list using column-name-to-property matching.
+    /// Equivalent to <c>JsonUtil.Deserialize&lt;List&lt;T&gt;&gt;(json)</c> — use when the query columns
+    /// are known upfront and a concrete DTO is preferred over the generic row accessor.
+    /// </summary>
+    /// <typeparam name="T">DTO type whose public properties match the column names returned by the query.</typeparam>
+    /// <param name="json">Raw JSON array payload from <c>AiContext.LastSkillResult</c>.</param>
+    /// <returns>Typed list of rows; empty when the payload is null or unparseable.</returns>
+    public static List<T> Deserialize<T>(string? json)
+        where T : new()
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<T>();
+        }
+
+        return JsonConvert.DeserializeObject<List<T>>(json) ?? new List<T>();
+    }
+}
+
+/// <summary>
+/// Represents a single field (column) within a database result row.
+/// </summary>
+public class DatabaseFieldDto
+{
+    private readonly JToken _rawValue;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseFieldDto"/> class.
+    /// </summary>
+    /// <param name="name">Column name.</param>
+    /// <param name="rawValue">Raw JSON token for the column value.</param>
+    internal DatabaseFieldDto(string name, JToken rawValue)
+    {
+        Name = name;
+        _rawValue = rawValue;
+    }
+
+    /// <summary>Gets the column name.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the column value as a trimmed string, or <see langword="null"/> when the database value is NULL.</summary>
+    public string? Value => _rawValue.Type == JTokenType.Null ? null : _rawValue.ToString()?.Trim();
+
+    /// <summary>
+    /// Gets the column value converted to the requested type.
+    /// </summary>
+    /// <typeparam name="T">Target value type.</typeparam>
+    /// <returns>Converted value when available; otherwise default.</returns>
+    public T? GetValue<T>()
+    {
+        if (_rawValue.Type == JTokenType.Null)
+        {
+            return default;
+        }
+
+        try
+        {
+            return _rawValue.ToObject<T>();
+        }
+        catch
+        {
+            return default;
+        }
+    }
+}
+
+/// <summary>
+/// Represents a generic row from a database query response.
+/// </summary>
+public class DatabaseQueryRowDto
+{
+    private readonly JObject _row;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseQueryRowDto"/> class.
+    /// </summary>
+    /// <param name="row">Row payload as a JSON object.</param>
+    public DatabaseQueryRowDto(JObject row)
+    {
+        _row = row ?? throw new ArgumentNullException(nameof(row));
+    }
+
+    /// <summary>
+    /// Gets all fields in this row as an ordered list of <see cref="DatabaseFieldDto"/> instances.
+    /// Each item exposes <c>Name</c> and <c>Value</c> directly — no key/value pair unwrapping needed.
+    /// </summary>
+    public IReadOnlyList<DatabaseFieldDto> Fields => _row.Properties()
+        .Select(p => new DatabaseFieldDto(p.Name, p.Value))
+        .ToList();
+
+    /// <summary>
+    /// Gets a trimmed string value for the specified column name.
+    /// </summary>
+    /// <param name="fieldName">Column name.</param>
+    /// <returns>Trimmed string or <see langword="null"/> when not found or NULL.</returns>
+    public string? this[string fieldName] => GetString(fieldName);
+
+    /// <summary>
+    /// Gets a value converted to the requested type.
+    /// </summary>
+    /// <typeparam name="T">Target value type.</typeparam>
+    /// <param name="fieldName">Field name to read.</param>
+    /// <returns>Converted value when available; otherwise default.</returns>
+    public T? GetValue<T>(string fieldName)
+    {
+        if (!_row.TryGetValue(fieldName, StringComparison.OrdinalIgnoreCase, out var token)
+            || token.Type == JTokenType.Null)
+        {
+            return default;
+        }
+
+        try
+        {
+            return token.ToObject<T>();
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Gets a string field with optional trim for padded values.
+    /// </summary>
+    /// <param name="fieldName">Field name to read.</param>
+    /// <param name="trim">Whether to trim leading/trailing spaces.</param>
+    /// <returns>Field value as string or <see langword="null"/>.</returns>
+    public string? GetString(string fieldName, bool trim = true)
+    {
+        var value = GetValue<string>(fieldName);
+        if (!trim)
+        {
+            return value;
+        }
+
+        return value?.Trim();
+    }
+}

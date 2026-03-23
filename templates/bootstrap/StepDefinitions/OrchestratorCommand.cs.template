@@ -1,0 +1,15 @@
+using Newtonsoft.Json;
+
+namespace {{PROJECT_NAME}}.StepDefinitions;
+
+/// <summary>
+/// Represents a structured command returned by the orchestrator prompt.
+/// </summary>
+/// <param name="Skill">Plugin name to invoke.</param>
+/// <param name="Function">Function name to invoke within the plugin.</param>
+/// <param name="Args">Function arguments as key-value pairs.</param>
+public record OrchestratorCommand(
+    [property: JsonProperty("skill")] string Skill,
+    [property: JsonProperty("function")] string Function,
+    [property: JsonProperty("args")] Dictionary<string, string> Args
+);

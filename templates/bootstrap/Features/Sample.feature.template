@@ -1,0 +1,11 @@
+Feature: Sample AI automation
+
+  @smoke @api
+  Scenario: Basic API call through AI
+    When I instruct the AI to "call GET https://api.example.com/users/1"
+    Then the AI action should succeed
+
+  @smoke @ui
+  Scenario: Basic browser navigation through AI
+    When I instruct the AI to "navigate to https://example.com"
+    Then the AI action should succeed

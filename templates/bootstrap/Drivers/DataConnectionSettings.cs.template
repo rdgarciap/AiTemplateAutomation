@@ -1,0 +1,32 @@
+namespace {{PROJECT_NAME}}.Drivers;
+
+/// <summary>
+/// Retrieves the data of the connection string to SQL server.
+/// </summary>
+public class DataConnectionSettings
+{
+    /// <summary>
+    /// Gets or sets the server.
+    /// </summary>
+    public string? Server { get; set; }
+
+    /// <summary>
+    /// Gets or sets the server port.
+    /// </summary>
+    public string? Port { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user id.
+    /// </summary>
+    public string? UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the password.
+    /// </summary>
+    public string? Password { get; set; }
+
+    /// <summary>
+    /// Gets or sets the database.
+    /// </summary>
+    public string? Database { get; set; }
+}

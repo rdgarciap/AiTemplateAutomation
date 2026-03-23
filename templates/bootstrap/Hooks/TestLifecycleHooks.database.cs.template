@@ -1,0 +1,108 @@
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Skills;
+using Gbm.Automation.Core.DB;
+using Microsoft.SemanticKernel;
+using Reqnroll;
+using Reqnroll.BoDi;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Configures per-scenario dependencies, including database capabilities.
+/// </summary>
+[Binding]
+public class TestLifecycleHooks
+{
+    private readonly IObjectContainer _container;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestLifecycleHooks"/> class.
+    /// </summary>
+    /// <param name="container">The Reqnroll DI container for the active scenario.</param>
+    public TestLifecycleHooks(IObjectContainer container)
+    {
+        _container = container;
+    }
+
+    /// <summary>
+    /// Builds and registers scenario services, including optional database services.
+    /// </summary>
+    /// <returns>A task that completes when initialization has finished.</returns>
+    [BeforeScenario]
+    public async Task SetupScenario()
+    {
+        var config = new ConfigurationDriver();
+        var aiContext = new AiContext();
+        var awsSecretsManager = new AwsSecretsManagerDriver(config);
+
+        _container.RegisterInstanceAs(config);
+        _container.RegisterInstanceAs(aiContext);
+        _container.RegisterInstanceAs(awsSecretsManager);
+
+        var builder = Kernel.CreateBuilder();
+        if (config.AiMode.Equals("azure", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.AddAzureOpenAIChatCompletion(
+                deploymentName: config.AzureDeployment,
+                endpoint: config.AzureEndpoint,
+                apiKey: config.AzureApiKey,
+                modelId: config.AzureModelId);
+        }
+        else
+        {
+            builder.AddOpenAIChatCompletion(
+                modelId: config.OpenAiModelId,
+                apiKey: config.OpenAiApiKey);
+        }
+
+        var kernel = builder.Build();
+        _container.RegisterInstanceAs(kernel);
+
+        var browserSkill = new BrowserSkill(aiContext);
+        var apiSkill = new ApiSkill(aiContext);
+
+        kernel.ImportPluginFromObject(browserSkill, "Browser");
+        kernel.ImportPluginFromObject(apiSkill, "Api");
+
+        _container.RegisterInstanceAs(browserSkill);
+        _container.RegisterInstanceAs(apiSkill);
+
+        var databaseConnectionString = await awsSecretsManager.ResolveDatabaseConnectionStringAsync();
+
+        if (!string.IsNullOrWhiteSpace(databaseConnectionString))
+        {
+            var dbBuilder = config.DatabaseProvider.ToLowerInvariant() switch
+            {
+                "postgres" or "postgresql" => new DbClientBuilder().UsePostgres(databaseConnectionString),
+                "mysql" => new DbClientBuilder().UseMySql(databaseConnectionString),
+                "sqlite" => new DbClientBuilder().UseSqlite(databaseConnectionString),
+                _ => new DbClientBuilder().UseSqlServer(databaseConnectionString)
+            };
+
+            dbBuilder.WithTimeout(config.DatabaseTimeoutSeconds);
+
+            if (config.DatabaseUseTransaction)
+                dbBuilder.WithTransactionByDefault();
+
+            var dbClient = dbBuilder.Build();
+            var dbSkill = new DatabaseSkill(aiContext, dbClient);
+            var schemaSkill = new SchemaInspectionSkill(aiContext, dbClient);
+
+            kernel.ImportPluginFromObject(dbSkill, "Database");
+            kernel.ImportPluginFromObject(schemaSkill, "SchemaInspection");
+            _container.RegisterInstanceAs(dbClient);
+            _container.RegisterInstanceAs(dbSkill);
+            _container.RegisterInstanceAs(schemaSkill);
+        }
+    }
+
+    /// <summary>
+    /// Executes scenario teardown tasks.
+    /// </summary>
+    [AfterScenario]
+    public void TeardownScenario()
+    {
+        // DbClient lifecycle is managed by Gbm.Automation.Core.
+        // Add cleanup for UI drivers or other external resources here if needed.
+    }
+}

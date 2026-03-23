@@ -1,0 +1,71 @@
+using {{PROJECT_NAME}}.Drivers;
+using Microsoft.SemanticKernel;
+using Newtonsoft.Json;
+using NUnit.Framework;
+using Reqnroll;
+
+namespace {{PROJECT_NAME}}.StepDefinitions;
+
+/// <summary>
+/// Defines BDD steps that route natural language instructions through the AI orchestrator.
+/// </summary>
+[Binding]
+public class AiOrchestratorSteps
+{
+    private readonly AiContext _aiContext;
+    private readonly Kernel _kernel;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AiOrchestratorSteps"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="kernel">Semantic Kernel instance for plugin invocation.</param>
+    public AiOrchestratorSteps(AiContext aiContext, Kernel kernel)
+    {
+        _aiContext = aiContext;
+        _kernel = kernel;
+    }
+
+    /// <summary>
+    /// Sends an instruction to the orchestrator prompt and executes the returned command.
+    /// </summary>
+    /// <param name="instruction">The natural language instruction from the feature step.</param>
+    /// <returns>A task that completes when command execution finishes.</returns>
+    [When(@"I instruct the AI to ""(.*)""")]
+    public async Task WhenIInstructTheAiToAsync(string instruction)
+    {
+        var promptPath = Path.Combine(AppContext.BaseDirectory, "Prompts", "orchestrator.skprompt.txt");
+        var promptTemplate = await File.ReadAllTextAsync(promptPath);
+        var availableSkills = string.Join(", ", _kernel.Plugins.Select(plugin => plugin.Name));
+
+        var arguments = new KernelArguments
+        {
+            ["instruction"] = instruction,
+            ["available_skills"] = availableSkills
+        };
+
+        var result = await _kernel.InvokePromptAsync(promptTemplate, arguments);
+        var rawJson = result.ToString();
+        _aiContext.LastRawResponse = rawJson;
+
+        var command = JsonConvert.DeserializeObject<OrchestratorCommand>(rawJson)
+            ?? throw new InvalidOperationException($"LLM returned invalid JSON: {rawJson}");
+
+        var kernelArgs = new KernelArguments();
+        foreach (var pair in command.Args)
+            kernelArgs[pair.Key] = pair.Value;
+
+        var skillResult = await _kernel.InvokeAsync(command.Skill, command.Function, kernelArgs);
+        _aiContext.LastSkillResult = skillResult.ToString();
+    }
+
+    /// <summary>
+    /// Verifies that the orchestrated AI action produced a non-error result.
+    /// </summary>
+    [Then(@"the AI action should succeed")]
+    public void ThenTheAiActionShouldSucceed()
+    {
+        Assert.That(_aiContext.LastSkillResult, Is.Not.Null, "AI action did not produce a result.");
+        Assert.That(_aiContext.LastSkillResult!.ToString(), Does.Not.Contain("error").IgnoreCase);
+    }
+}

@@ -1,0 +1,48 @@
+# CodeQL configuration for SAST (Static application security testing)
+#
+# Check the following URL for more information:
+# https://gbmprojects.atlassian.net/wiki/spaces/TECHNOLOGY/pages/2491482171/Considerations+to+implement+Code+QL+in+gbmcode+repositories
+
+name: CodeQL
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    workflow_dispatch:
+
+env:
+  VSTS_GITHUB_ACCESS_KEY: ${{ secrets.READ_GITHUB_PACKAGES }}
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ csharp ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Config Nuget
+      run: sed -i "s/VSTS_GITHUB_ACCESS_KEY/$VSTS_GITHUB_ACCESS_KEY/g" ./NuGet.Config
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2

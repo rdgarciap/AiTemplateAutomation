@@ -1,0 +1,105 @@
+using Dapper;
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Models;
+using {{PROJECT_NAME}}.Skills;
+using NUnit.Framework;
+using Reqnroll;
+
+namespace {{PROJECT_NAME}}.StepDefinitions;
+
+/// <summary>
+/// Defines deterministic database-related BDD steps.
+/// </summary>
+[Binding]
+public class DatabaseStepDefinitions
+{
+    private const string LastDatabaseResultDtoKey = "LastDatabaseResultDto";
+
+    private readonly DatabaseSkill _dbSkill;
+    private readonly AiContext _aiContext;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseStepDefinitions"/> class.
+    /// </summary>
+    /// <param name="dbSkill">Database skill used to execute commands.</param>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    public DatabaseStepDefinitions(DatabaseSkill dbSkill, AiContext aiContext)
+    {
+        _dbSkill = dbSkill;
+        _aiContext = aiContext;
+    }
+
+    /// <summary>
+    /// Executes a SQL query without parameters.
+    /// </summary>
+    /// <param name="query">SQL query text.</param>
+    /// <returns>A task that completes when the query finishes.</returns>
+    [When(@"I execute the SQL query ""(.*)""")]
+    public async Task WhenIExecuteTheSqlQueryAsync(string query)
+    {
+        var result = await _dbSkill.ExecuteQueryAsync(query);
+        _aiContext.LastSkillResult = result;
+        _aiContext.SharedData[LastDatabaseResultDtoKey] = DatabaseQueryResultDto.FromJson(result);
+    }
+
+    /// <summary>
+    /// Executes a SQL query with tabular parameters from the feature step.
+    /// </summary>
+    /// <param name="query">SQL query text.</param>
+    /// <param name="parameters">Reqnroll table containing parameter name/value pairs.</param>
+    /// <returns>A task that completes when the query finishes.</returns>
+    [When(@"I execute the SQL query ""(.*)"" with parameters")]
+    public async Task WhenIExecuteTheSqlQueryWithParametersAsync(string query, Reqnroll.DataTable parameters)
+    {
+        var result = await _dbSkill.ExecuteQueryAsync(query, BuildDynamicParameters(parameters));
+        _aiContext.LastSkillResult = result;
+        _aiContext.SharedData[LastDatabaseResultDtoKey] = DatabaseQueryResultDto.FromJson(result);
+    }
+
+    /// <summary>
+    /// Asserts that the query returned at least the requested number of rows.
+    /// </summary>
+    /// <param name="minRows">Minimum expected row count.</param>
+    [Then(@"the database query should return at least (\d+) rows?")]
+    public void ThenTheDatabaseQueryShouldReturnAtLeastRows(int minRows)
+    {
+        if (_aiContext.SharedData.TryGetValue(LastDatabaseResultDtoKey, out var stored)
+            && stored is DatabaseQueryResultDto dtoFromContext)
+        {
+            Assert.That(dtoFromContext.Count, Is.GreaterThanOrEqualTo(minRows));
+            return;
+        }
+
+        var fallbackJson = _aiContext.LastSkillResult?.ToString() ?? "[]";
+        var fallbackDto = DatabaseQueryResultDto.FromJson(fallbackJson);
+        _aiContext.SharedData[LastDatabaseResultDtoKey] = fallbackDto;
+
+        Assert.That(fallbackDto.Count, Is.GreaterThanOrEqualTo(minRows));
+    }
+
+    private static DynamicParameters BuildDynamicParameters(Reqnroll.DataTable table)
+    {
+        var parameters = new DynamicParameters();
+        foreach (var row in table.Rows)
+        {
+            var name = row["Parameter"].ToString()!;
+            var rawValue = row["Value"]?.ToString();
+            var type = table.Header.Contains("Type") ? row["Type"]?.ToString() : null;
+            parameters.Add(name, ConvertValue(rawValue, type));
+        }
+        return parameters;
+    }
+
+    private static object? ConvertValue(string? rawValue, string? type)
+    {
+        return type?.ToLowerInvariant() switch
+        {
+            "int" => int.Parse(rawValue!),
+            "bool" => bool.Parse(rawValue!),
+            "decimal" => decimal.Parse(rawValue!, System.Globalization.CultureInfo.InvariantCulture),
+            "datetime" => DateTime.Parse(rawValue!, System.Globalization.CultureInfo.InvariantCulture),
+            "null" => null,
+            _ => rawValue
+        };
+    }
+}

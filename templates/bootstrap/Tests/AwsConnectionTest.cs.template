@@ -1,0 +1,113 @@
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Drivers.Aws;
+using NUnit.Framework;
+
+namespace {{PROJECT_NAME}}.Tests;
+
+/// <summary>
+/// Contains connectivity smoke tests for AWS credentials and secrets access.
+/// </summary>
+[TestFixture]
+public class AwsConnectionTest
+{
+    /// <summary>
+    /// Ensures baseline AWS environment variables are present for the test run.
+    /// </summary>
+    [SetUp]
+    public void Setup()
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_PROFILE")))
+            Environment.SetEnvironmentVariable("AWS_PROFILE", "BOA-DEV");
+
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_REGION")))
+            Environment.SetEnvironmentVariable("AWS_REGION", "us-east-1");
+    }
+
+    /// <summary>
+    /// Verifies that the current AWS session can be validated through STS.
+    /// </summary>
+    /// <returns>A task that completes when validation is finished.</returns>
+    [Test]
+    [Category("AWS")]
+    [Category("Integration")]
+    public async Task TestAwsSessionValidation()
+    {
+        AwsSessionValidator.ResetValidation();
+        var isValid = await AwsSessionValidator.ValidateSessionAsync();
+        Assert.That(isValid, Is.True, "AWS session should be valid. Make sure you have run 'aws sso login --profile BOA-DEV'");
+    }
+
+    /// <summary>
+    /// Verifies that a secret can be retrieved as raw string.
+    /// </summary>
+    /// <returns>A task that completes when secret retrieval is finished.</returns>
+    [Test]
+    [Category("AWS")]
+    [Category("Integration")]
+    [Explicit]
+    public async Task TestSecretsManagerWrapper_GetSecretString()
+    {
+        using var wrapper = AwsClientFactory.CreateSecretsManagerWrapper("us-east-1");
+        var secret = await wrapper.GetSecretStringAsync("/gbm/boa/project/sqlserver-credentials");
+        Assert.That(secret, Is.Not.Null.And.Not.Empty);
+        Console.WriteLine($"Secret retrieved. Length: {secret!.Length}");
+    }
+
+    /// <summary>
+    /// Verifies that a structured database secret can be deserialized.
+    /// </summary>
+    /// <returns>A task that completes when secret deserialization is finished.</returns>
+    [Test]
+    [Category("AWS")]
+    [Category("Integration")]
+    [Explicit]
+    public async Task TestSecretsManagerWrapper_GetDatabaseSecret()
+    {
+        using var wrapper = AwsClientFactory.CreateSecretsManagerWrapper("us-east-1");
+        var dbSecret = await wrapper.GetSecretAsAsync<DatabaseSecretModel>("/gbm/boa/project/sqlserver-credentials");
+        Assert.That(dbSecret, Is.Not.Null);
+        Assert.That(dbSecret!.IsValid(), Is.True);
+        Console.WriteLine($"Server: {dbSecret.Server} | Database: {dbSecret.Database} | User: {dbSecret.UserId}");
+    }
+
+    /// <summary>
+    /// Verifies that a database connection string can be built from secret data.
+    /// </summary>
+    /// <returns>A task that completes when connection string resolution is finished.</returns>
+    [Test]
+    [Category("AWS")]
+    [Category("Integration")]
+    [Explicit]
+    public async Task TestSecretsManagerWrapper_GetConnectionString()
+    {
+        using var wrapper = AwsClientFactory.CreateSecretsManagerWrapper("us-east-1");
+        var connectionString = await wrapper.GetDatabaseConnectionStringAsync("/gbm/boa/project/sqlserver-credentials");
+        Assert.That(connectionString, Is.Not.Null);
+        Assert.That(connectionString, Does.Contain("Server=").And.Contain("Database="));
+        Console.WriteLine($"Connection string built. Length: {connectionString!.Length}");
+    }
+
+    /// <summary>
+    /// Verifies that the AWS driver resolves a connection string using active configuration.
+    /// </summary>
+    /// <returns>A task that completes when resolution is finished.</returns>
+    [Test]
+    [Category("AWS")]
+    [Category("Integration")]
+    public async Task TestAwsSecretsManagerDriver_ResolveDatabaseConnectionString()
+    {
+        var config = new ConfigurationDriver();
+        var driver = new AwsSecretsManagerDriver(config);
+        var connectionString = await driver.ResolveDatabaseConnectionStringAsync();
+        Assert.That(connectionString, Is.Not.Null);
+        if (!string.IsNullOrEmpty(connectionString))
+        {
+            Assert.That(connectionString, Does.Contain("Server=").Or.Contain("Data Source="));
+            Console.WriteLine($"Connection string resolved. Length: {connectionString.Length}");
+        }
+        else
+        {
+            Console.WriteLine("Connection string is empty — AWS not configured or no local placeholder present.");
+        }
+    }
+}

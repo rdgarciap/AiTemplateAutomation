@@ -1,0 +1,92 @@
+using System.ComponentModel;
+using System.Text;
+using {{PROJECT_NAME}}.Drivers;
+using Microsoft.SemanticKernel;
+using Newtonsoft.Json.Linq;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Provides HTTP-based automation functions for API test scenarios.
+/// </summary>
+public class ApiSkill
+{
+    private readonly AiContext _aiContext;
+    private static readonly HttpClient HttpClient = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiSkill"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    public ApiSkill(AiContext aiContext)
+    {
+        _aiContext = aiContext;
+    }
+
+    [KernelFunction("GetRequest")]
+    [Description("Executes an HTTP GET request and stores the response body.")]
+    /// <summary>
+    /// Executes an HTTP GET request.
+    /// </summary>
+    /// <param name="url">The target URL.</param>
+    /// <returns>The response body.</returns>
+    public async Task<string> GetRequestAsync([Description("The target URL.")] string url)
+    {
+        var response = await HttpClient.GetStringAsync(url);
+        _aiContext.LastSkillResult = response;
+        return response;
+    }
+
+    [KernelFunction("PostRequest")]
+    [Description("Executes an HTTP POST request with a JSON body.")]
+    /// <summary>
+    /// Executes an HTTP POST request with JSON body.
+    /// </summary>
+    /// <param name="url">The target URL.</param>
+    /// <param name="body">The JSON body.</param>
+    /// <returns>The response body.</returns>
+    public async Task<string> PostRequestAsync(
+        [Description("The target URL.")] string url,
+        [Description("JSON body.")] string body)
+    {
+        var content = new StringContent(body, Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(url, content);
+        var result = await response.Content.ReadAsStringAsync();
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("ValidateJsonSchema")]
+    [Description("Validates that the last API response contains all required fields.")]
+    /// <summary>
+    /// Validates fields in the last API response payload.
+    /// </summary>
+    /// <param name="requiredFields">Comma-separated list of required field names.</param>
+    /// <returns>A validation status message.</returns>
+    public string ValidateJsonSchema([Description("Comma-separated required fields.")] string requiredFields)
+    {
+        _aiContext.ValidationErrors.Clear();
+        var responseJson = _aiContext.LastSkillResult?.ToString();
+        if (string.IsNullOrWhiteSpace(responseJson))
+        {
+            _aiContext.ValidationErrors.Add("No API response available to validate.");
+            return "Validation failed: no response.";
+        }
+
+        var token = JToken.Parse(responseJson);
+        var responseObject = token is JArray arr ? arr.FirstOrDefault() as JObject : token as JObject;
+        if (responseObject is null)
+        {
+            _aiContext.ValidationErrors.Add("Response is not a JSON object or array of objects.");
+            return "Validation failed: invalid JSON shape.";
+        }
+
+        foreach (var field in requiredFields.Split(',').Select(item => item.Trim()).Where(item => item.Length > 0))
+        {
+            if (responseObject[field] is null)
+                _aiContext.ValidationErrors.Add($"Missing required field: {field}");
+        }
+
+        return _aiContext.ValidationErrors.Count == 0 ? "Validation succeeded." : "Validation failed.";
+    }
+}

@@ -1,0 +1,175 @@
+// <copyright file="SchemaInspectionStepDefinitions.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Skills;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+using Reqnroll;
+
+namespace {{PROJECT_NAME}}.StepDefinitions;
+
+/// <summary>
+/// Defines BDD steps for inspecting SQL Server schema metadata (indexes and their columns).
+/// </summary>
+[Binding]
+public class SchemaInspectionStepDefinitions
+{
+    private readonly SchemaInspectionSkill _schemaSkill;
+    private readonly AiContext _aiContext;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SchemaInspectionStepDefinitions"/> class.
+    /// </summary>
+    /// <param name="schemaSkill">Schema inspection skill used to query catalog views.</param>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    public SchemaInspectionStepDefinitions(SchemaInspectionSkill schemaSkill, AiContext aiContext)
+    {
+        _schemaSkill = schemaSkill;
+        _aiContext = aiContext;
+    }
+
+    /// <summary>
+    /// Queries all indexes of the specified table across every schema.
+    /// </summary>
+    /// <param name="tableName">The table whose indexes will be retrieved.</param>
+    /// <returns>A task that completes when the inspection finishes.</returns>
+    [When(@"I inspect the indexes of table ""(.*)""")]
+    public async Task WhenIInspectTheIndexesOfTableAsync(string tableName)
+    {
+        _aiContext.LastSkillResult = await _schemaSkill.GetTableIndexesAsync(tableName);
+    }
+
+    /// <summary>
+    /// Queries all indexes of the specified table restricted to a given schema.
+    /// </summary>
+    /// <param name="tableName">The table whose indexes will be retrieved.</param>
+    /// <param name="schema">The schema that scopes the search (e.g. <c>dbo</c>).</param>
+    /// <returns>A task that completes when the inspection finishes.</returns>
+    [When(@"I inspect the indexes of table ""(.*)"" in schema ""(.*)""")]
+    public async Task WhenIInspectTheIndexesOfTableInSchemaAsync(string tableName, string schema)
+    {
+        _aiContext.LastSkillResult = await _schemaSkill.GetTableIndexesAsync(tableName, schema);
+    }
+
+    /// <summary>
+    /// Asserts that at least the given number of indexes were returned by the last inspection.
+    /// </summary>
+    /// <param name="minCount">Minimum expected index count.</param>
+    [Then(@"the table should have at least (\d+) indexes?")]
+    public void ThenTheTableShouldHaveAtLeastIndexes(int minCount)
+    {
+        var indexes = ParseLastIndexResult();
+        Assert.That(indexes.Count, Is.GreaterThanOrEqualTo(minCount),
+            $"Expected at least {minCount} index(es) but found {indexes.Count}.");
+    }
+
+    /// <summary>
+    /// Asserts that an index with the given name exists in the last inspection result.
+    /// </summary>
+    /// <param name="indexName">The exact index name to look for.</param>
+    [Then(@"the index ""(.*)"" should exist")]
+    public void ThenTheIndexShouldExist(string indexName)
+    {
+        var indexes = ParseLastIndexResult();
+        var found = indexes.Any(i => string.Equals(
+            i["indexName"]?.ToString(), indexName, StringComparison.OrdinalIgnoreCase));
+        Assert.That(found, Is.True,
+            $"Index '{indexName}' was not found. Available indexes: {string.Join(", ", indexes.Select(i => i["indexName"]))}");
+    }
+
+    /// <summary>
+    /// Asserts that the named index has the specified type (CLUSTERED or NONCLUSTERED).
+    /// </summary>
+    /// <param name="indexName">The index name.</param>
+    /// <param name="expectedType">Expected type: <c>CLUSTERED</c> or <c>NONCLUSTERED</c>.</param>
+    [Then(@"the index ""(.*)"" should be (CLUSTERED|NONCLUSTERED)")]
+    public void ThenTheIndexShouldBeType(string indexName, string expectedType)
+    {
+        var index = GetRequiredIndex(indexName);
+        Assert.That(
+            index["indexType"]?.ToString(),
+            Is.EqualTo(expectedType).IgnoreCase,
+            $"Index '{indexName}' type mismatch.");
+    }
+
+    /// <summary>
+    /// Asserts that the named index is the primary key of the table.
+    /// </summary>
+    /// <param name="indexName">The index name.</param>
+    [Then(@"the index ""(.*)"" should be the primary key")]
+    public void ThenTheIndexShouldBeThePrimaryKey(string indexName)
+    {
+        var index = GetRequiredIndex(indexName);
+        Assert.That(
+            index["isPrimaryKey"]?.Value<bool>(), Is.True,
+            $"Index '{indexName}' is not marked as primary key.");
+    }
+
+    /// <summary>
+    /// Asserts that the named index is unique.
+    /// </summary>
+    /// <param name="indexName">The index name.</param>
+    [Then(@"the index ""(.*)"" should be unique")]
+    public void ThenTheIndexShouldBeUnique(string indexName)
+    {
+        var index = GetRequiredIndex(indexName);
+        Assert.That(
+            index["isUnique"]?.Value<bool>(), Is.True,
+            $"Index '{indexName}' is not unique.");
+    }
+
+    /// <summary>
+    /// Asserts that the named index contains the given column as a key column.
+    /// </summary>
+    /// <param name="indexName">The index name.</param>
+    /// <param name="columnName">The expected key column name.</param>
+    [Then(@"the index ""(.*)"" should include the key column ""(.*)""")]
+    public void ThenTheIndexShouldIncludeTheKeyColumn(string indexName, string columnName)
+    {
+        var index = GetRequiredIndex(indexName);
+        var keyColumns = index["keyColumns"]?.Values<string>().ToList() ?? new List<string?>();
+        Assert.That(
+            keyColumns.Any(c => string.Equals(c, columnName, StringComparison.OrdinalIgnoreCase)),
+            Is.True,
+            $"Column '{columnName}' not found in key columns of index '{indexName}'. Found: {string.Join(", ", keyColumns)}");
+    }
+
+    /// <summary>
+    /// Asserts that the named index contains the given column as an included (non-key) column.
+    /// </summary>
+    /// <param name="indexName">The index name.</param>
+    /// <param name="columnName">The expected included column name.</param>
+    [Then(@"the index ""(.*)"" should have included column ""(.*)""")]
+    public void ThenTheIndexShouldHaveIncludedColumn(string indexName, string columnName)
+    {
+        var index = GetRequiredIndex(indexName);
+        var includedColumns = index["includedColumns"]?.Values<string>().ToList() ?? new List<string?>();
+        Assert.That(
+            includedColumns.Any(c => string.Equals(c, columnName, StringComparison.OrdinalIgnoreCase)),
+            Is.True,
+            $"Column '{columnName}' not found in included columns of index '{indexName}'. Found: {string.Join(", ", includedColumns)}");
+    }
+
+    private List<JObject> ParseLastIndexResult()
+    {
+        var raw = _aiContext.LastSkillResult?.ToString() ?? "[]";
+        var token = JToken.Parse(raw);
+        if (token is JArray array)
+        {
+            return array.OfType<JObject>().ToList();
+        }
+
+        return new List<JObject>();
+    }
+
+    private JObject GetRequiredIndex(string indexName)
+    {
+        var indexes = ParseLastIndexResult();
+        var index = indexes.FirstOrDefault(i => string.Equals(
+            i["indexName"]?.ToString(), indexName, StringComparison.OrdinalIgnoreCase));
+        Assert.That(index, Is.Not.Null, $"Index '{indexName}' was not found in the last inspection result.");
+        return index!;
+    }
+}

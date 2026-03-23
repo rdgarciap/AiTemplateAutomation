@@ -1,0 +1,68 @@
+using Gbm.Automation.Core.Aws;
+using Gbm.Automation.Core.Aws.Abstractions;
+
+namespace {{PROJECT_NAME}}.Drivers.Aws;
+
+/// <summary>
+/// Centralizes creation and initialization of AWS helper clients.
+/// </summary>
+public static class AwsClientFactory
+{
+    private static string? _defaultRegion;
+    private static bool _initialized;
+
+    /// <summary>
+    /// Initializes AWS environment variables used by the client wrappers.
+    /// </summary>
+    /// <param name="defaultRegion">The default AWS region to configure when none is set.</param>
+    public static void Initialize(string defaultRegion = "us-east-1")
+    {
+        if (_initialized) return;
+
+        _defaultRegion = defaultRegion;
+
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_REGION")))
+            Environment.SetEnvironmentVariable("AWS_REGION", defaultRegion);
+
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION")))
+            Environment.SetEnvironmentVariable("AWS_DEFAULT_REGION", defaultRegion);
+
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_SDK_LOAD_CONFIG")))
+            Environment.SetEnvironmentVariable("AWS_SDK_LOAD_CONFIG", "1");
+
+        _initialized = true;
+        Console.WriteLine($"AwsClientFactory initialized with region: {defaultRegion}");
+    }
+
+    /// <summary>
+    /// Creates a secrets manager client instance.
+    /// </summary>
+    /// <returns>An initialized <see cref="ISecretManagerClient"/> instance.</returns>
+    public static ISecretManagerClient CreateSecretsManagerClient()
+    {
+        EnsureInitialized();
+        return new SecretsManagerClient();
+    }
+
+    /// <summary>
+    /// Creates a high-level secrets manager wrapper.
+    /// </summary>
+    /// <param name="region">The target AWS region. Uses the default region when omitted.</param>
+    /// <returns>An initialized <see cref="SecretsManagerWrapper"/>.</returns>
+    public static SecretsManagerWrapper CreateSecretsManagerWrapper(string? region = null)
+    {
+        EnsureInitialized();
+        return new SecretsManagerWrapper(region ?? _defaultRegion ?? "us-east-1");
+    }
+
+    /// <summary>
+    /// Gets the configured default AWS region.
+    /// </summary>
+    /// <returns>The configured region value.</returns>
+    public static string GetDefaultRegion() => _defaultRegion ?? "us-east-1";
+
+    private static void EnsureInitialized()
+    {
+        if (!_initialized) Initialize();
+    }
+}

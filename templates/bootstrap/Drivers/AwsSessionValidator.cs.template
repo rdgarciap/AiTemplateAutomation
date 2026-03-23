@@ -1,0 +1,113 @@
+using Amazon.Runtime;
+using Amazon.SecurityToken;
+using Amazon.SecurityToken.Model;
+
+namespace {{PROJECT_NAME}}.Drivers;
+
+/// <summary>
+/// Validates AWS session availability and caches the result for the current test run.
+/// </summary>
+public class AwsSessionValidator
+{
+    private static bool _sessionValidated = false;
+    private static readonly object _lock = new object();
+
+    /// <summary>
+    /// Validates the current AWS session by calling STS GetCallerIdentity.
+    /// </summary>
+    /// <returns><see langword="true"/> when the session is valid; otherwise, <see langword="false"/>.</returns>
+    public static async Task<bool> ValidateSessionAsync()
+    {
+        lock (_lock)
+        {
+            if (_sessionValidated)
+            {
+                Console.WriteLine("AWS session already validated in this test run.");
+                return true;
+            }
+        }
+
+        Console.WriteLine("=== AWS Session Validation START ===");
+
+        try
+        {
+            var awsProfile = Environment.GetEnvironmentVariable("AWS_PROFILE");
+            var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION");
+            var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+
+            Console.WriteLine($"AWS_PROFILE: {awsProfile ?? "NOT SET"}");
+            Console.WriteLine($"AWS_REGION: {awsRegion ?? "NOT SET"}");
+            Console.WriteLine($"AWS_ACCESS_KEY_ID: {(string.IsNullOrEmpty(awsAccessKey) ? "NOT SET" : "SET")}");
+
+            if (string.IsNullOrEmpty(awsProfile) && string.IsNullOrEmpty(awsAccessKey))
+            {
+                Console.WriteLine("AWS credentials not configured. Set AWS_PROFILE or AWS_ACCESS_KEY_ID.");
+                return false;
+            }
+
+            var credentials = AwsCredentialsProvider.GetCredentials();
+            using var stsClient = new AmazonSecurityTokenServiceClient(credentials);
+            var response = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+
+            Console.WriteLine($"AWS Session Valid! Account: {response.Account} | Arn: {response.Arn}");
+
+            lock (_lock)
+            {
+                _sessionValidated = true;
+            }
+
+            Console.WriteLine("=== AWS Session Validation SUCCESS ===");
+            return true;
+        }
+        catch (AmazonServiceException ex) when (ex.ErrorCode == "ExpiredToken")
+        {
+            Console.WriteLine($"AWS SSO token has expired. Run: aws sso login --profile {Environment.GetEnvironmentVariable("AWS_PROFILE")}");
+            Console.WriteLine("=== AWS Session Validation FAILED ===");
+            return false;
+        }
+        catch (AmazonServiceException ex) when (ex.ErrorCode == "InvalidClientTokenId")
+        {
+            Console.WriteLine($"AWS credentials are invalid. Verify AWS_PROFILE and run aws sso login. Error: {ex.Message}");
+            Console.WriteLine("=== AWS Session Validation FAILED ===");
+            return false;
+        }
+        catch (AmazonClientException ex)
+        {
+            Console.WriteLine($"AWS SDK error: {ex.Message}");
+            Console.WriteLine("Workaround: export credentials with: aws configure export-credentials --profile YOUR-PROFILE --format env-no-export");
+            Console.WriteLine("See: docs/AWS_SSO_Workaround_DotNet.md");
+            Console.WriteLine("=== AWS Session Validation FAILED ===");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"AWS Session validation failed ({ex.GetType().Name}): {ex.Message}");
+            Console.WriteLine("Steps: 1) aws --version  2) aws configure sso  3) aws sso login  4) Set AWS_PROFILE  5) Restart IDE");
+            Console.WriteLine("=== AWS Session Validation FAILED ===");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Resets the cached validation flag.
+    /// </summary>
+    public static void ResetValidation()
+    {
+        lock (_lock)
+        {
+            _sessionValidated = false;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the session has already been validated.
+    /// </summary>
+    /// <returns><see langword="true"/> when the session was validated in this run; otherwise, <see langword="false"/>.</returns>
+    public static bool IsSessionValidated()
+    {
+        lock (_lock)
+        {
+            return _sessionValidated;
+        }
+    }
+}

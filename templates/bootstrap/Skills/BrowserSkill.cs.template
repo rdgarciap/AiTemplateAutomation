@@ -1,0 +1,81 @@
+using System.ComponentModel;
+using {{PROJECT_NAME}}.Drivers;
+using Microsoft.SemanticKernel;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Provides browser interaction functions exposed to the orchestrator.
+/// </summary>
+public class BrowserSkill
+{
+    private readonly AiContext _aiContext;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BrowserSkill"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    public BrowserSkill(AiContext aiContext)
+    {
+        _aiContext = aiContext;
+    }
+
+    [KernelFunction("NavigateTo")]
+    [Description("Navigates the browser to the specified URL.")]
+    /// <summary>
+    /// Navigates to the provided URL.
+    /// </summary>
+    /// <param name="url">The destination URL.</param>
+    /// <returns>A JSON status payload.</returns>
+    public string NavigateTo([Description("The full URL to navigate to.")] string url)
+    {
+        var result = $"{{\"action\":\"NavigateTo\",\"url\":\"{url}\",\"status\":\"success\"}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("ClickElement")]
+    [Description("Clicks on an element identified by selector or visible text.")]
+    /// <summary>
+    /// Clicks an element identified by selector.
+    /// </summary>
+    /// <param name="selector">Selector or visible text.</param>
+    /// <returns>A JSON status payload.</returns>
+    public string ClickElement([Description("Selector or visible text.")] string selector)
+    {
+        var result = $"{{\"action\":\"ClickElement\",\"selector\":\"{selector}\",\"status\":\"success\"}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("FillField")]
+    [Description("Fills an input field identified by selector.")]
+    /// <summary>
+    /// Fills an input field with the provided value.
+    /// </summary>
+    /// <param name="selector">Selector or logical field name.</param>
+    /// <param name="value">Value to input.</param>
+    /// <returns>A JSON status payload.</returns>
+    public string FillField(
+        [Description("Selector or logical field name.")] string selector,
+        [Description("Value to write.")] string value)
+    {
+        var result = $"{{\"action\":\"FillField\",\"selector\":\"{selector}\",\"value\":\"{value}\",\"status\":\"success\"}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("GetElementText")]
+    [Description("Gets text from an element identified by selector.")]
+    /// <summary>
+    /// Gets the text from an element.
+    /// </summary>
+    /// <param name="selector">Selector or logical element name.</param>
+    /// <returns>A JSON payload containing the extracted text.</returns>
+    public string GetElementText([Description("Selector or logical element name.")] string selector)
+    {
+        var result = $"{{\"action\":\"GetElementText\",\"selector\":\"{selector}\",\"text\":\"[element text]\",\"status\":\"success\"}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+}

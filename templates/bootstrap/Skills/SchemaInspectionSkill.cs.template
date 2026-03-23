@@ -1,0 +1,148 @@
+// <copyright file="SchemaInspectionSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using System.ComponentModel;
+using Dapper;
+using {{PROJECT_NAME}}.Drivers;
+using Gbm.Automation.Core.DB.Abstractions;
+using Gbm.Automation.Core.Utils.Common;
+using Microsoft.SemanticKernel;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Provides read-only SQL Server schema inspection functions for querying
+/// indexes and their column composition on any table.
+/// </summary>
+public class SchemaInspectionSkill
+{
+    private readonly AiContext _aiContext;
+    private readonly IDbClient _dbClient;
+
+    /// <summary>
+    /// Catalog query that returns one row per index-column combination.
+    /// Works on SQL Server 2008 R2 and later (no STRING_AGG dependency).
+    /// </summary>
+    private const string IndexColumnsQuery = @"
+        SELECT
+            s.name                AS SchemaName,
+            i.name                AS IndexName,
+            i.type_desc           AS IndexType,
+            i.is_unique           AS IsUnique,
+            i.is_primary_key      AS IsPrimaryKey,
+            ic.key_ordinal        AS KeyOrdinal,
+            ic.is_included_column AS IsIncludedColumn,
+            ic.index_column_id    AS IndexColumnId,
+            c.name                AS ColumnName
+        FROM sys.tables t
+        INNER JOIN sys.schemas s
+               ON s.schema_id = t.schema_id
+        INNER JOIN sys.indexes i
+               ON i.object_id = t.object_id
+        INNER JOIN sys.index_columns ic
+               ON ic.object_id = t.object_id
+              AND ic.index_id   = i.index_id
+        INNER JOIN sys.columns c
+               ON c.object_id  = t.object_id
+              AND c.column_id  = ic.column_id
+        WHERE  t.name           = @TableName
+          AND  (@Schema IS NULL OR s.name = @Schema)
+          AND  i.index_id       > 0
+          AND  i.is_hypothetical = 0
+        ORDER BY s.name, i.index_id,
+                 ic.is_included_column, ic.key_ordinal, ic.index_column_id";
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SchemaInspectionSkill"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="dbClient">Database client abstraction.</param>
+    public SchemaInspectionSkill(AiContext aiContext, IDbClient dbClient)
+    {
+        _aiContext = aiContext;
+        _dbClient = dbClient;
+    }
+
+    /// <summary>
+    /// Returns the indexes of a table as a structured JSON array.
+    /// Each element contains <c>schemaName</c>, <c>indexName</c>, <c>indexType</c>,
+    /// <c>isUnique</c>, <c>isPrimaryKey</c>, <c>keyColumns</c>, and <c>includedColumns</c>.
+    /// Grouping is performed in memory so the method is compatible with SQL Server 2008 R2+.
+    /// </summary>
+    /// <param name="tableName">The table name to inspect (case-insensitive).</param>
+    /// <param name="schema">Optional schema filter (e.g. <c>"dbo"</c>). Pass <see langword="null"/> to return all schemas.</param>
+    /// <returns>JSON array where each element represents one index with its column lists.</returns>
+    [KernelFunction("GetTableIndexes")]
+    [Description("Returns the indexes of a SQL Server table as a structured JSON array with keyColumns and includedColumns arrays.")]
+    public async Task<string> GetTableIndexesAsync(string tableName, string? schema = null)
+    {
+        var parameters = BuildParameters(tableName, schema);
+        var rawRows = await _dbClient.QueryAsync<dynamic>(IndexColumnsQuery, parameters);
+
+        var jArray = JArray.Parse(JsonUtil.SerializeObject(rawRows));
+
+        var grouped = jArray
+            .GroupBy(r => $"{r["SchemaName"]}||{r["IndexName"]}")
+            .Select(g =>
+            {
+                var first = g.First();
+                var keyColumns = g
+                    .Where(r => r["IsIncludedColumn"]?.Value<bool>() == false
+                             && r["KeyOrdinal"]?.Value<int>() > 0)
+                    .OrderBy(r => r["KeyOrdinal"]?.Value<int>())
+                    .Select(r => r["ColumnName"]?.ToString())
+                    .ToList();
+
+                var includedColumns = g
+                    .Where(r => r["IsIncludedColumn"]?.Value<bool>() == true)
+                    .OrderBy(r => r["IndexColumnId"]?.Value<int>())
+                    .Select(r => r["ColumnName"]?.ToString())
+                    .ToList();
+
+                return new
+                {
+                    schemaName = first["SchemaName"]?.ToString(),
+                    indexName = first["IndexName"]?.ToString(),
+                    indexType = first["IndexType"]?.ToString(),
+                    isUnique = first["IsUnique"]?.Value<bool>(),
+                    isPrimaryKey = first["IsPrimaryKey"]?.Value<bool>(),
+                    keyColumns,
+                    includedColumns,
+                };
+            })
+            .ToList();
+
+        var result = JsonConvert.SerializeObject(grouped, Formatting.None);
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Returns a flat list of index-column rows for a table (one row per column per index).
+    /// Useful for detailed comparisons or when the grouped view is insufficient.
+    /// </summary>
+    /// <param name="tableName">The table name to inspect.</param>
+    /// <param name="schema">Optional schema filter. Pass <see langword="null"/> to return all schemas.</param>
+    /// <returns>JSON array with one entry per index-column pair.</returns>
+    [KernelFunction("GetTableIndexColumns")]
+    [Description("Returns individual index-column pairs for a SQL Server table. One row per column per index.")]
+    public async Task<string> GetTableIndexColumnsAsync(string tableName, string? schema = null)
+    {
+        var parameters = BuildParameters(tableName, schema);
+        var rows = await _dbClient.QueryAsync<dynamic>(IndexColumnsQuery, parameters);
+        var result = JsonUtil.SerializeObject(rows);
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    private static DynamicParameters BuildParameters(string tableName, string? schema)
+    {
+        var p = new DynamicParameters();
+        p.Add("TableName", tableName);
+        p.Add("Schema", (object?)schema ?? DBNull.Value);
+        return p;
+    }
+}

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "{{PROJECT_NAME}}": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AWS_PROFILE": "BOA-DEV",
+        "AWS_REGION": "us-east-1",
+        "AWS_SDK_LOAD_CONFIG": "1"
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+namespace {{PROJECT_NAME}}.Drivers;
+
+/// <summary>
+/// Stores per-scenario AI orchestration state shared across steps and skills.
+/// </summary>
+public class AiContext
+{
+    /// <summary>Gets or sets the last raw model response.</summary>
+    public string? LastRawResponse { get; set; }
+
+    /// <summary>Gets or sets the last result returned by a skill invocation.</summary>
+    public object? LastSkillResult { get; set; }
+
+    /// <summary>Gets the validation errors collected during scenario execution.</summary>
+    public List<string> ValidationErrors { get; } = new();
+
+    /// <summary>Gets shared key-value state for custom step coordination.</summary>
+    public Dictionary<string, object> SharedData { get; } = new();
+}

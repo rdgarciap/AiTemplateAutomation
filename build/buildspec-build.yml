@@ -1,0 +1,54 @@
+﻿#------------------------------------------------------------------------------
+#
+# Copyright GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+#
+# File: buildspec-build.yml
+# Purpose: Builds a generated AI automation testing project (<ProjectName>).
+#
+# ════════════════════════════════════════════════════════════════════════
+# GUÍA DE ACTUALIZACIÓN DE VERSIÓN DE .NET
+# ════════════════════════════════════════════════════════════════════════
+# Si .NET 8 queda descontinuado:
+#   1. Cambia la versión en runtime-versions.dotnet abajo (8.0 → 9.0, etc.)
+#   2. Actualiza TargetFramework en src/<ProjectName>/<ProjectName>.csproj
+#   3. Revisa compatibilidad de paquetes NuGet (SemanticKernel, Reqnroll)
+# ════════════════════════════════════════════════════════════════════════
+#------------------------------------------------------------------------------
+
+version: 0.2
+
+env:
+  variables:
+    PROJECT_NAME: DemoFinancialServicesQA
+  # VSTS_GITHUB_ACCESS_KEY se expone como variable de entorno al proceso de build.
+  # NuGet.Config lo lee directamente con la sintaxis %VSTS_GITHUB_ACCESS_KEY%
+  # sin necesidad de sustitución manual con sed.
+  parameter-store:
+    VSTS_GITHUB_ACCESS_KEY: devops.github.token.read
+
+phases:
+  install:
+    runtime-versions:
+      # ► ACTUALIZAR AQUÍ AL CAMBIAR DE VERSIÓN DE .NET ◄
+      dotnet: 8.0
+
+  pre_build:
+    commands:
+      - if [ $STAGE = "stg" ]; then
+          sed -i 's/SECLEVEL=2/SECLEVEL=0/g' /etc/ssl/openssl.cnf;
+        fi
+      - ln -sf /usr/share/zoneinfo/America/Mexico_City /etc/localtime
+      - echo "America/Mexico_City" > /etc/timezone
+
+  build:
+    commands:
+      - cd "src/$PROJECT_NAME/"
+      - dotnet restore
+      - dotnet test --configuration Release -- NUnit.TestOutputXml=TestResult
+    on-failure: ABORT
+
+  post_build:
+    commands:
+      - dotnet publish --configuration Release -o ./publish
+      - aws s3 cp ./publish s3://gbm-demo-ai-agent-$REGION-$STAGE/automation/publish --recursive
+    on-failure: ABORT

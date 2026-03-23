@@ -1,0 +1,70 @@
+using Microsoft.Extensions.Configuration;
+
+namespace {{PROJECT_NAME}}.Drivers;
+
+/// <summary>
+/// Provides strongly-typed accessors for test and integration runtime configuration.
+/// </summary>
+public class ConfigurationDriver
+{
+    private readonly IConfiguration _config;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfigurationDriver"/> class.
+    /// </summary>
+    public ConfigurationDriver()
+    {
+        _config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddEnvironmentVariables()
+            .Build();
+    }
+
+    /// <summary>Gets the AI provider mode.</summary>
+    public string AiMode => _config["AiSettings:Mode"] ?? "online";
+
+    /// <summary>Gets the AI completion temperature.</summary>
+    public double AiTemperature => double.Parse(_config["AiSettings:Temperature"] ?? "0.0");
+
+    /// <summary>Gets the maximum AI token count.</summary>
+    public int AiMaxTokens => int.Parse(_config["AiSettings:MaxTokens"] ?? "500");
+
+    /// <summary>Gets the OpenAI API key.</summary>
+    public string OpenAiApiKey => _config["AiSettings:OpenAI:ApiKey"] ?? string.Empty;
+
+    /// <summary>Gets the OpenAI model identifier.</summary>
+    public string OpenAiModelId => _config["AiSettings:OpenAI:ModelId"] ?? "gpt-4o";
+
+    /// <summary>Gets the Azure OpenAI endpoint.</summary>
+    public string AzureEndpoint => _config["AiSettings:AzureOpenAI:Endpoint"] ?? string.Empty;
+
+    /// <summary>Gets the Azure OpenAI API key.</summary>
+    public string AzureApiKey => _config["AiSettings:AzureOpenAI:ApiKey"] ?? string.Empty;
+
+    /// <summary>Gets the Azure OpenAI deployment name.</summary>
+    public string AzureDeployment => _config["AiSettings:AzureOpenAI:DeploymentName"] ?? string.Empty;
+
+    /// <summary>Gets the Azure OpenAI model identifier.</summary>
+    public string AzureModelId => _config["AiSettings:AzureOpenAI:ModelId"] ?? "gpt-4o";
+
+    /// <summary>Gets the configured AWS region.</summary>
+    public string AwsRegion => _config["AWSSettings:Region"]
+        ?? Environment.GetEnvironmentVariable("AWS_REGION")
+        ?? Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION")
+        ?? string.Empty;
+
+    /// <summary>Gets the AWS secret name used to resolve the database connection string.</summary>
+    public string DatabaseConnectionSecretName => _config["AWSSettings:Secrets:SobConnectionString"] ?? string.Empty;
+
+    /// <summary>Gets the direct database connection string from configuration.</summary>
+    public string DatabaseConnectionString => _config["DatabaseSettings:ConnectionString"] ?? string.Empty;
+
+    /// <summary>Gets the default database timeout in seconds.</summary>
+    public int DatabaseTimeoutSeconds => int.Parse(_config["DatabaseSettings:TimeoutSeconds"] ?? "30");
+
+    /// <summary>Gets a value indicating whether transactions are enabled by default.</summary>
+    public bool DatabaseUseTransaction => bool.Parse(_config["DatabaseSettings:UseTransactionByDefault"] ?? "false");
+
+    /// <summary>Gets the configured database provider name.</summary>
+    public string DatabaseProvider => _config["DatabaseSettings:Provider"] ?? "SqlServer";
+}

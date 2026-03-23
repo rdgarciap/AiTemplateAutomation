@@ -1,0 +1,29 @@
+{
+  "AWSSettings": {
+    "Region": "us-east-1",
+    "Secrets": {
+      "SobConnectionString": "/gbm/boa/project/sqlserver-credentials"
+    }
+  },
+  "AiSettings": {
+    "Mode": "online",
+    "Temperature": 0.0,
+    "MaxTokens": 500,
+    "OpenAI": {
+      "ApiKey": "YOUR_KEY",
+      "ModelId": "gpt-4o"
+    },
+    "AzureOpenAI": {
+      "Endpoint": "https://RESOURCE.openai.azure.com/",
+      "ApiKey": "YOUR_KEY",
+      "DeploymentName": "YOUR_DEPLOYMENT",
+      "ModelId": "gpt-4o"
+    }
+  },
+  "DatabaseSettings": {
+    "ConnectionString": "Server=REPLACE_ME;Database=REPLACE_ME;User Id=REPLACE_ME;Password=REPLACE_ME;TrustServerCertificate=True;",
+    "TimeoutSeconds": 30,
+    "UseTransactionByDefault": false,
+    "Provider": "SqlServer"
+  }
+}
