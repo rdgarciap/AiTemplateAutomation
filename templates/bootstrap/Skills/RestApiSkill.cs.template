@@ -1,0 +1,203 @@
+// <copyright file="RestApiSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using System.ComponentModel;
+using System.Net;
+using Gbm.Automation.Core.Utils.Common;
+using Microsoft.SemanticKernel;
+using Newtonsoft.Json.Linq;
+using RestSharp;
+using {{PROJECT_NAME}}.Drivers;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Provides HTTP REST automation functions using RestSharp and Gbm.Automation.Core.Utils.Common.RestUtil.
+/// </summary>
+public class RestApiSkill : IRestApiSkill
+{
+    private readonly AiContext _aiContext;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RestApiSkill"/> class.
+    /// </summary>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    public RestApiSkill(AiContext aiContext)
+    {
+        _aiContext = aiContext;
+    }
+
+    [KernelFunction("RestGet")]
+    [Description("Executes an HTTP GET request via RestSharp and stores the response body. headersJson is an optional JSON object like {\"Authorization\":\"Bearer token\"}.")]
+    /// <summary>
+    /// Executes an HTTP GET request.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    public async Task<string> GetRequestAsync(
+        [Description("Base URL, e.g. https://api.example.com")] string baseUrl,
+        [Description("Resource path, e.g. /v1/users/123")] string path,
+        [Description("Optional JSON object with HTTP headers.")] string? headersJson = null)
+    {
+        var request = new RestRequest(path, Method.Get);
+        ApplyHeaders(request, headersJson);
+        var response = await RestUtil.ExecuteAsync(baseUrl, request, CancellationToken.None);
+        return StoreAndReturn(response);
+    }
+
+    [KernelFunction("RestPost")]
+    [Description("Executes an HTTP POST request with a JSON body via RestSharp and stores the response body.")]
+    /// <summary>
+    /// Executes an HTTP POST request with a JSON body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    public async Task<string> PostRequestAsync(
+        [Description("Base URL, e.g. https://api.example.com")] string baseUrl,
+        [Description("Resource path, e.g. /v1/orders")] string path,
+        [Description("JSON body to send in the request.")] string body,
+        [Description("Optional JSON object with HTTP headers.")] string? headersJson = null)
+    {
+        var request = new RestRequest(path, Method.Post);
+        request.AddJsonBody(body);
+        ApplyHeaders(request, headersJson);
+        var response = await RestUtil.ExecuteAsync(baseUrl, request, CancellationToken.None);
+        return StoreAndReturn(response);
+    }
+
+    [KernelFunction("RestPut")]
+    [Description("Executes an HTTP PUT request with a JSON body via RestSharp and stores the response body.")]
+    /// <summary>
+    /// Executes an HTTP PUT request with a JSON body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    public async Task<string> PutRequestAsync(
+        [Description("Base URL, e.g. https://api.example.com")] string baseUrl,
+        [Description("Resource path, e.g. /v1/users/123")] string path,
+        [Description("JSON body to send in the request.")] string body,
+        [Description("Optional JSON object with HTTP headers.")] string? headersJson = null)
+    {
+        var request = new RestRequest(path, Method.Put);
+        request.AddJsonBody(body);
+        ApplyHeaders(request, headersJson);
+        var response = await RestUtil.ExecuteAsync(baseUrl, request, CancellationToken.None);
+        return StoreAndReturn(response);
+    }
+
+    [KernelFunction("RestPatch")]
+    [Description("Executes an HTTP PATCH request with a JSON body via RestSharp and stores the response body.")]
+    /// <summary>
+    /// Executes an HTTP PATCH request with a JSON body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    public async Task<string> PatchRequestAsync(
+        [Description("Base URL, e.g. https://api.example.com")] string baseUrl,
+        [Description("Resource path, e.g. /v1/users/123")] string path,
+        [Description("JSON body to send in the request.")] string body,
+        [Description("Optional JSON object with HTTP headers.")] string? headersJson = null)
+    {
+        var request = new RestRequest(path, Method.Patch);
+        request.AddJsonBody(body);
+        ApplyHeaders(request, headersJson);
+        var response = await RestUtil.ExecuteAsync(baseUrl, request, CancellationToken.None);
+        return StoreAndReturn(response);
+    }
+
+    [KernelFunction("RestDelete")]
+    [Description("Executes an HTTP DELETE request via RestSharp and stores the response body.")]
+    /// <summary>
+    /// Executes an HTTP DELETE request.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    public async Task<string> DeleteRequestAsync(
+        [Description("Base URL, e.g. https://api.example.com")] string baseUrl,
+        [Description("Resource path, e.g. /v1/users/123")] string path,
+        [Description("Optional JSON object with HTTP headers.")] string? headersJson = null)
+    {
+        var request = new RestRequest(path, Method.Delete);
+        ApplyHeaders(request, headersJson);
+        var response = await RestUtil.ExecuteAsync(baseUrl, request, CancellationToken.None);
+        return StoreAndReturn(response);
+    }
+
+    [KernelFunction("RestValidateJsonSchema")]
+    [Description("Validates that the last REST response body contains all required fields. Does not perform an HTTP call; operates on the stored last response.")]
+    /// <summary>
+    /// Validates fields in the last REST response payload.
+    /// </summary>
+    /// <param name="requiredFields">Comma-separated list of required field names.</param>
+    /// <returns>A validation status message.</returns>
+    public string ValidateJsonSchema(
+        [Description("Comma-separated required field names, e.g. id,name,email")] string requiredFields)
+    {
+        _aiContext.ValidationErrors.Clear();
+        var responseJson = _aiContext.LastSkillResult?.ToString();
+        if (string.IsNullOrWhiteSpace(responseJson))
+        {
+            _aiContext.ValidationErrors.Add("No REST response available to validate.");
+            return "Validation failed: no response.";
+        }
+
+        JToken token;
+        try
+        {
+            token = JToken.Parse(responseJson);
+        }
+        catch
+        {
+            _aiContext.ValidationErrors.Add("Last response is not valid JSON.");
+            return "Validation failed: invalid JSON.";
+        }
+
+        var responseObject = token is JArray arr ? arr.FirstOrDefault() as JObject : token as JObject;
+        if (responseObject is null)
+        {
+            _aiContext.ValidationErrors.Add("Response is not a JSON object or array of objects.");
+            return "Validation failed: invalid JSON shape.";
+        }
+
+        foreach (var field in requiredFields.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0))
+        {
+            if (responseObject[field] is null)
+                _aiContext.ValidationErrors.Add($"Missing required field: {field}");
+        }
+
+        return _aiContext.ValidationErrors.Count == 0 ? "Validation succeeded." : "Validation failed.";
+    }
+
+    private static void ApplyHeaders(RestRequest request, string? headersJson)
+    {
+        if (string.IsNullOrWhiteSpace(headersJson))
+            return;
+
+        var headers = JObject.Parse(headersJson);
+        foreach (var property in headers.Properties())
+            request.AddHeader(property.Name, property.Value.ToString());
+    }
+
+    private string StoreAndReturn(RestResponse response)
+    {
+        var result = response.Content ?? string.Empty;
+        _aiContext.LastSkillResult = result;
+        _aiContext.SharedData["LastRestStatusCode"] = (int)(HttpStatusCode)response.StatusCode;
+        _aiContext.SharedData["LastRestIsSuccessful"] = response.IsSuccessful;
+        return result;
+    }
+}

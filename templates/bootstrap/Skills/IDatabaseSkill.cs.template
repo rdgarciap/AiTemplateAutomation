@@ -1,0 +1,69 @@
+// <copyright file="IDatabaseSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using Dapper;
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Defines the contract for database execution functions exposed to test scenarios.
+/// </summary>
+public interface IDatabaseSkill
+{
+    /// <summary>
+    /// Executes a read-only SQL SELECT query and returns the results as JSON.
+    /// </summary>
+    /// <param name="query">The SQL query text.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>Serialized rows as JSON.</returns>
+    Task<string> ExecuteQueryAsync(string query, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a SQL command and returns the affected row count as JSON.
+    /// </summary>
+    /// <param name="sql">The SQL command text.</param>
+    /// <param name="parameters">Optional command parameters.</param>
+    /// <returns>A JSON payload containing affected rows.</returns>
+    Task<string> ExecuteCommandAsync(string sql, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a stored procedure that returns a result set.
+    /// </summary>
+    /// <param name="spName">Stored procedure name.</param>
+    /// <param name="parameters">Optional stored procedure parameters.</param>
+    /// <returns>Serialized rows as JSON.</returns>
+    Task<string> ExecuteStoredProcedureAsync(string spName, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a non-query stored procedure and returns the affected row count as JSON.
+    /// </summary>
+    /// <param name="spName">Stored procedure name.</param>
+    /// <param name="parameters">Optional stored procedure parameters.</param>
+    /// <returns>A JSON payload containing affected rows.</returns>
+    Task<string> ExecuteNonQueryStoredProcedureAsync(string spName, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a SQL query expected to return one row and returns it as JSON, or null.
+    /// </summary>
+    /// <param name="query">The SQL query text.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>Serialized single row as JSON object, or the string "null".</returns>
+    Task<string> QuerySingleOrDefaultAsync(string query, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a SQL query and returns the value of a single column from the first row as JSON.
+    /// </summary>
+    /// <param name="sql">The SQL query text.</param>
+    /// <param name="columnName">The name of the column to extract.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>A JSON payload containing the scalar value.</returns>
+    Task<string> ExecuteScalarAsync(string sql, string columnName, DynamicParameters? parameters = null);
+
+    /// <summary>
+    /// Executes a SQL script file and returns the total affected row count as JSON.
+    /// </summary>
+    /// <param name="relativePath">Relative or absolute path to the SQL script.</param>
+    /// <returns>A JSON payload containing total affected rows.</returns>
+    Task<string> ExecuteScriptFileAsync(string relativePath);
+}

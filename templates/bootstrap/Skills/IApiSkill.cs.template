@@ -1,0 +1,33 @@
+// <copyright file="IApiSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Defines the contract for HTTP-based automation functions.
+/// </summary>
+public interface IApiSkill
+{
+    /// <summary>
+    /// Executes an HTTP GET request and returns the response body.
+    /// </summary>
+    /// <param name="url">The target URL.</param>
+    /// <returns>The response body.</returns>
+    Task<string> GetRequestAsync(string url);
+
+    /// <summary>
+    /// Executes an HTTP POST request with a JSON body and returns the response body.
+    /// </summary>
+    /// <param name="url">The target URL.</param>
+    /// <param name="body">The JSON body.</param>
+    /// <returns>The response body.</returns>
+    Task<string> PostRequestAsync(string url, string body);
+
+    /// <summary>
+    /// Validates that the last API response contains all required fields.
+    /// </summary>
+    /// <param name="requiredFields">Comma-separated list of required field names.</param>
+    /// <returns>A validation status message.</returns>
+    string ValidateJsonSchema(string requiredFields);
+}

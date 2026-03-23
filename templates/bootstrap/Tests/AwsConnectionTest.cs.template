@@ -32,8 +32,9 @@ public class AwsConnectionTest
     [Category("Integration")]
     public async Task TestAwsSessionValidation()
     {
-        AwsSessionValidator.ResetValidation();
-        var isValid = await AwsSessionValidator.ValidateSessionAsync();
+        // Use a dedicated instance to avoid resetting shared singleton state across concurrent tests.
+        var validator = new AwsSessionValidator(AwsCredentialsProvider.Instance);
+        var isValid = await validator.ValidateSessionAsync();
         Assert.That(isValid, Is.True, "AWS session should be valid. Make sure you have run 'aws sso login --profile BOA-DEV'");
     }
 

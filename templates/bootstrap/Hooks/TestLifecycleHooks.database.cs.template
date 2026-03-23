@@ -1,5 +1,8 @@
+// <copyright file="TestLifecycleHooks.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
 using {{PROJECT_NAME}}.Drivers;
-using {{PROJECT_NAME}}.Skills;
 using Gbm.Automation.Core.DB;
 using Microsoft.SemanticKernel;
 using Reqnroll;
@@ -8,7 +11,7 @@ using Reqnroll.BoDi;
 namespace {{PROJECT_NAME}}.Hooks;
 
 /// <summary>
-/// Configures per-scenario dependencies, including database capabilities.
+/// Configures per-scenario dependencies, including optional database capabilities.
 /// </summary>
 [Binding]
 public class TestLifecycleHooks
@@ -39,44 +42,21 @@ public class TestLifecycleHooks
         _container.RegisterInstanceAs(aiContext);
         _container.RegisterInstanceAs(awsSecretsManager);
 
-        var builder = Kernel.CreateBuilder();
-        if (config.AiMode.Equals("azure", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.AddAzureOpenAIChatCompletion(
-                deploymentName: config.AzureDeployment,
-                endpoint: config.AzureEndpoint,
-                apiKey: config.AzureApiKey,
-                modelId: config.AzureModelId);
-        }
-        else
-        {
-            builder.AddOpenAIChatCompletion(
-                modelId: config.OpenAiModelId,
-                apiKey: config.OpenAiApiKey);
-        }
-
-        var kernel = builder.Build();
+        var kernel = KernelFactory.Build(config);
         _container.RegisterInstanceAs(kernel);
 
-        var browserSkill = new BrowserSkill(aiContext);
-        var apiSkill = new ApiSkill(aiContext);
+        SkillRegistry.RegisterCoreSkills(kernel, aiContext, _container);
 
-        kernel.ImportPluginFromObject(browserSkill, "Browser");
-        kernel.ImportPluginFromObject(apiSkill, "Api");
+        var connectionString = await awsSecretsManager.ResolveDatabaseConnectionStringAsync();
 
-        _container.RegisterInstanceAs(browserSkill);
-        _container.RegisterInstanceAs(apiSkill);
-
-        var databaseConnectionString = await awsSecretsManager.ResolveDatabaseConnectionStringAsync();
-
-        if (!string.IsNullOrWhiteSpace(databaseConnectionString))
+        if (!string.IsNullOrWhiteSpace(connectionString))
         {
             var dbBuilder = config.DatabaseProvider.ToLowerInvariant() switch
             {
-                "postgres" or "postgresql" => new DbClientBuilder().UsePostgres(databaseConnectionString),
-                "mysql" => new DbClientBuilder().UseMySql(databaseConnectionString),
-                "sqlite" => new DbClientBuilder().UseSqlite(databaseConnectionString),
-                _ => new DbClientBuilder().UseSqlServer(databaseConnectionString)
+                "postgres" or "postgresql" => new DbClientBuilder().UsePostgres(connectionString),
+                "mysql" => new DbClientBuilder().UseMySql(connectionString),
+                "sqlite" => new DbClientBuilder().UseSqlite(connectionString),
+                _ => new DbClientBuilder().UseSqlServer(connectionString)
             };
 
             dbBuilder.WithTimeout(config.DatabaseTimeoutSeconds);
@@ -85,14 +65,9 @@ public class TestLifecycleHooks
                 dbBuilder.WithTransactionByDefault();
 
             var dbClient = dbBuilder.Build();
-            var dbSkill = new DatabaseSkill(aiContext, dbClient);
-            var schemaSkill = new SchemaInspectionSkill(aiContext, dbClient);
-
-            kernel.ImportPluginFromObject(dbSkill, "Database");
-            kernel.ImportPluginFromObject(schemaSkill, "SchemaInspection");
             _container.RegisterInstanceAs(dbClient);
-            _container.RegisterInstanceAs(dbSkill);
-            _container.RegisterInstanceAs(schemaSkill);
+
+            SkillRegistry.RegisterDatabaseSkills(kernel, aiContext, dbClient, _container);
         }
     }
 

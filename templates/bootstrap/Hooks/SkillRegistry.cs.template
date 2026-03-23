@@ -1,0 +1,34 @@
+// <copyright file="SkillRegistry.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Skills;
+using Microsoft.SemanticKernel;
+using Reqnroll.BoDi;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Registers Semantic Kernel plugins and skill interfaces into the per-scenario DI container.
+/// </summary>
+public static class SkillRegistry
+{
+    /// <summary>
+    /// Registers core skills (Browser, Api) into the kernel and the scenario container.
+    /// </summary>
+    /// <param name="kernel">The active Semantic Kernel instance.</param>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="container">The Reqnroll per-scenario DI container.</param>
+    public static void RegisterCoreSkills(Kernel kernel, AiContext aiContext, IObjectContainer container)
+    {
+        var browserSkill = new BrowserSkill(aiContext);
+        var apiSkill = new ApiSkill(aiContext);
+
+        kernel.ImportPluginFromObject(browserSkill, "Browser");
+        kernel.ImportPluginFromObject(apiSkill, "Api");
+
+        container.RegisterInstanceAs<IBrowserSkill>(browserSkill);
+        container.RegisterInstanceAs<IApiSkill>(apiSkill);
+    }
+}

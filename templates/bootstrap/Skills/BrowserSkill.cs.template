@@ -7,7 +7,7 @@ namespace {{PROJECT_NAME}}.Skills;
 /// <summary>
 /// Provides browser interaction functions exposed to the orchestrator.
 /// </summary>
-public class BrowserSkill
+public class BrowserSkill : IBrowserSkill
 {
     private readonly AiContext _aiContext;
 

@@ -1,0 +1,40 @@
+// <copyright file="IBrowserSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Defines the contract for browser interaction automation functions.
+/// </summary>
+public interface IBrowserSkill
+{
+    /// <summary>
+    /// Navigates the browser to the specified URL.
+    /// </summary>
+    /// <param name="url">The destination URL.</param>
+    /// <returns>A JSON status payload.</returns>
+    string NavigateTo(string url);
+
+    /// <summary>
+    /// Clicks on an element identified by selector or visible text.
+    /// </summary>
+    /// <param name="selector">Selector or visible text.</param>
+    /// <returns>A JSON status payload.</returns>
+    string ClickElement(string selector);
+
+    /// <summary>
+    /// Fills an input field identified by selector with the given value.
+    /// </summary>
+    /// <param name="selector">Selector or logical field name.</param>
+    /// <param name="value">Value to input.</param>
+    /// <returns>A JSON status payload.</returns>
+    string FillField(string selector, string value);
+
+    /// <summary>
+    /// Gets the text from an element identified by selector.
+    /// </summary>
+    /// <param name="selector">Selector or logical element name.</param>
+    /// <returns>A JSON payload containing the extracted text.</returns>
+    string GetElementText(string selector);
+}

@@ -17,7 +17,7 @@ namespace {{PROJECT_NAME}}.Skills;
 /// Provides read-only SQL Server schema inspection functions for querying
 /// indexes and their column composition on any table.
 /// </summary>
-public class SchemaInspectionSkill
+public class SchemaInspectionSkill : ISchemaInspectionSkill
 {
     private readonly AiContext _aiContext;
     private readonly IDbClient _dbClient;

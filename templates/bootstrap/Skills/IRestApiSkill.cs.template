@@ -1,0 +1,66 @@
+// <copyright file="IRestApiSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+namespace {{PROJECT_NAME}}.Skills;
+
+/// <summary>
+/// Defines the contract for HTTP REST functions exposed to test scenarios via RestSharp.
+/// </summary>
+public interface IRestApiSkill
+{
+    /// <summary>
+    /// Executes an HTTP GET request and returns the response body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    Task<string> GetRequestAsync(string baseUrl, string path, string? headersJson = null);
+
+    /// <summary>
+    /// Executes an HTTP POST request with a JSON body and returns the response body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    Task<string> PostRequestAsync(string baseUrl, string path, string body, string? headersJson = null);
+
+    /// <summary>
+    /// Executes an HTTP PUT request with a JSON body and returns the response body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    Task<string> PutRequestAsync(string baseUrl, string path, string body, string? headersJson = null);
+
+    /// <summary>
+    /// Executes an HTTP PATCH request with a JSON body and returns the response body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="body">The JSON body to send.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    Task<string> PatchRequestAsync(string baseUrl, string path, string body, string? headersJson = null);
+
+    /// <summary>
+    /// Executes an HTTP DELETE request and returns the response body.
+    /// </summary>
+    /// <param name="baseUrl">The base URL of the service.</param>
+    /// <param name="path">The resource path.</param>
+    /// <param name="headersJson">Optional JSON object with header key-value pairs.</param>
+    /// <returns>The response body as string.</returns>
+    Task<string> DeleteRequestAsync(string baseUrl, string path, string? headersJson = null);
+
+    /// <summary>
+    /// Validates that the last REST response contains all required fields.
+    /// </summary>
+    /// <param name="requiredFields">Comma-separated list of required field names.</param>
+    /// <returns>A validation status message.</returns>
+    string ValidateJsonSchema(string requiredFields);
+}

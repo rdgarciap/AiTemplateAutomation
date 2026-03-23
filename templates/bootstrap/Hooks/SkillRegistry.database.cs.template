@@ -1,0 +1,57 @@
+// <copyright file="SkillRegistry.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using {{PROJECT_NAME}}.Drivers;
+using {{PROJECT_NAME}}.Skills;
+using Gbm.Automation.Core.DB.Abstractions;
+using Microsoft.SemanticKernel;
+using Reqnroll.BoDi;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Registers Semantic Kernel plugins and skill interfaces into the per-scenario DI container.
+/// </summary>
+public static class SkillRegistry
+{
+    /// <summary>
+    /// Registers core skills (Browser, Api, RestApi) into the kernel and the scenario container.
+    /// </summary>
+    /// <param name="kernel">The active Semantic Kernel instance.</param>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="container">The Reqnroll per-scenario DI container.</param>
+    public static void RegisterCoreSkills(Kernel kernel, AiContext aiContext, IObjectContainer container)
+    {
+        var browserSkill = new BrowserSkill(aiContext);
+        var apiSkill = new ApiSkill(aiContext);
+        var restApiSkill = new RestApiSkill(aiContext);
+
+        kernel.ImportPluginFromObject(browserSkill, "Browser");
+        kernel.ImportPluginFromObject(apiSkill, "Api");
+        kernel.ImportPluginFromObject(restApiSkill, "RestApi");
+
+        container.RegisterInstanceAs<IBrowserSkill>(browserSkill);
+        container.RegisterInstanceAs<IApiSkill>(apiSkill);
+        container.RegisterInstanceAs<IRestApiSkill>(restApiSkill);
+    }
+
+    /// <summary>
+    /// Registers database skills (Database, SchemaInspection) into the kernel and the scenario container.
+    /// </summary>
+    /// <param name="kernel">The active Semantic Kernel instance.</param>
+    /// <param name="aiContext">Shared scenario AI context.</param>
+    /// <param name="dbClient">The resolved database client.</param>
+    /// <param name="container">The Reqnroll per-scenario DI container.</param>
+    public static void RegisterDatabaseSkills(Kernel kernel, AiContext aiContext, IDbClient dbClient, IObjectContainer container)
+    {
+        var dbSkill = new DatabaseSkill(aiContext, dbClient);
+        var schemaSkill = new SchemaInspectionSkill(aiContext, dbClient);
+
+        kernel.ImportPluginFromObject(dbSkill, "Database");
+        kernel.ImportPluginFromObject(schemaSkill, "SchemaInspection");
+
+        container.RegisterInstanceAs<IDatabaseSkill>(dbSkill);
+        container.RegisterInstanceAs<ISchemaInspectionSkill>(schemaSkill);
+    }
+}

@@ -40,5 +40,13 @@ Instruction: "query the database for active users"
 Output:
 {"skill":"Database","function":"ExecuteQuery","args":{"query":"SELECT * FROM Users WHERE Status = 'Active'"}}
 
+Instruction: "get indexes of the Orders table"
+Output:
+{"skill":"SchemaInspection","function":"GetTableIndexes","args":{"tableName":"Orders"}}
+
+Instruction: "inspect index columns of the Products table in schema dbo"
+Output:
+{"skill":"SchemaInspection","function":"GetTableIndexColumns","args":{"tableName":"Products","schema":"dbo"}}
+
 Instruction: "{{$instruction}}"
 Output:

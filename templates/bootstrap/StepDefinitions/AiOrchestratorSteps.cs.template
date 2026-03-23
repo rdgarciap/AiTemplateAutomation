@@ -34,6 +34,7 @@ public class AiOrchestratorSteps
     [When(@"I instruct the AI to ""(.*)""")]
     public async Task WhenIInstructTheAiToAsync(string instruction)
     {
+        _aiContext.ValidationErrors.Clear();
         var promptPath = Path.Combine(AppContext.BaseDirectory, "Prompts", "orchestrator.skprompt.txt");
         var promptTemplate = await File.ReadAllTextAsync(promptPath);
         var availableSkills = string.Join(", ", _kernel.Plugins.Select(plugin => plugin.Name));

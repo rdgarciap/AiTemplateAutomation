@@ -1,16 +1,20 @@
+// <copyright file="DatabaseSkill.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
 using System.ComponentModel;
 using Dapper;
-using {{PROJECT_NAME}}.Drivers;
 using Gbm.Automation.Core.DB.Abstractions;
 using Gbm.Automation.Core.Utils.Common;
 using Microsoft.SemanticKernel;
+using {{PROJECT_NAME}}.Drivers;
 
 namespace {{PROJECT_NAME}}.Skills;
 
 /// <summary>
 /// Provides database execution functions for deterministic test steps.
 /// </summary>
-public class DatabaseSkill
+public class DatabaseSkill : IDatabaseSkill
 {
     private readonly AiContext _aiContext;
     private readonly IDbClient _dbClient;
@@ -27,13 +31,13 @@ public class DatabaseSkill
     }
 
     [KernelFunction("ExecuteQuery")]
-    [Description("Executes a read-only SQL SELECT query and returns the results as JSON.")]
+    [Description("Executes a read-only SQL SELECT query and returns all result rows as a JSON array.")]
     /// <summary>
     /// Executes a SQL query and returns rows as JSON.
     /// </summary>
     /// <param name="query">The SQL query text.</param>
     /// <param name="parameters">Optional query parameters.</param>
-    /// <returns>Serialized rows as JSON.</returns>
+    /// <returns>Serialized rows as JSON array.</returns>
     public async Task<string> ExecuteQueryAsync(string query, DynamicParameters? parameters = null)
     {
         var rows = await _dbClient.QueryAsync<dynamic>(query, parameters);
@@ -42,6 +46,24 @@ public class DatabaseSkill
         return result;
     }
 
+    [KernelFunction("QuerySingleOrDefault")]
+    [Description("Executes a SQL SELECT query expected to return one row and returns it as JSON, or null if no row is found.")]
+    /// <summary>
+    /// Executes a SQL query and returns a single row as JSON, or null.
+    /// </summary>
+    /// <param name="query">The SQL query text.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>Serialized single row as JSON object, or the string "null".</returns>
+    public async Task<string> QuerySingleOrDefaultAsync(string query, DynamicParameters? parameters = null)
+    {
+        var row = await _dbClient.QuerySingleOrDefaultAsync<dynamic>(query, parameters);
+        var result = row is not null ? JsonUtil.SerializeObject(row) : "null";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("ExecuteCommand")]
+    [Description("Executes a SQL INSERT, UPDATE or DELETE command and returns the number of affected rows as JSON.")]
     /// <summary>
     /// Executes a SQL command and returns affected row count.
     /// </summary>
@@ -56,12 +78,14 @@ public class DatabaseSkill
         return result;
     }
 
+    [KernelFunction("ExecuteStoredProcedure")]
+    [Description("Executes a SQL stored procedure that returns a result set and returns rows as a JSON array. Use EXEC syntax for SQL Server, e.g. EXEC dbo.MyProc @Param.")]
     /// <summary>
     /// Executes a stored procedure that returns rows.
     /// </summary>
-    /// <param name="spName">Stored procedure name.</param>
+    /// <param name="spName">Stored procedure name or EXEC statement.</param>
     /// <param name="parameters">Optional stored procedure parameters.</param>
-    /// <returns>Serialized rows as JSON.</returns>
+    /// <returns>Serialized rows as JSON array.</returns>
     public async Task<string> ExecuteStoredProcedureAsync(string spName, DynamicParameters? parameters = null)
     {
         var rows = await _dbClient.QueryAsync<dynamic>(spName, parameters);
@@ -70,6 +94,8 @@ public class DatabaseSkill
         return result;
     }
 
+    [KernelFunction("ExecuteNonQueryStoredProcedure")]
+    [Description("Executes a SQL stored procedure that does not return rows and returns the affected row count as JSON.")]
     /// <summary>
     /// Executes a non-query stored procedure.
     /// </summary>
@@ -84,6 +110,25 @@ public class DatabaseSkill
         return result;
     }
 
+    [KernelFunction("ExecuteScalar")]
+    [Description("Executes a SQL query and returns the value of a single column from the first row as JSON.")]
+    /// <summary>
+    /// Executes a SQL query and returns a scalar column value.
+    /// </summary>
+    /// <param name="sql">The SQL query text.</param>
+    /// <param name="columnName">The name of the column to extract.</param>
+    /// <param name="parameters">Optional query parameters.</param>
+    /// <returns>A JSON payload containing the scalar value.</returns>
+    public async Task<string> ExecuteScalarAsync(string sql, string columnName, DynamicParameters? parameters = null)
+    {
+        var value = await _dbClient.ExecuteScalarAsync<object>(sql, columnName, parameters);
+        var result = $"{{\"value\": {JsonUtil.SerializeObject(value)}}}";
+        _aiContext.LastSkillResult = result;
+        return result;
+    }
+
+    [KernelFunction("ExecuteScriptFile")]
+    [Description("Executes all SQL statements from a .sql script file and returns the total affected rows as JSON.")]
     /// <summary>
     /// Executes a SQL script file.
     /// </summary>

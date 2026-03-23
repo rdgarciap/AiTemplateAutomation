@@ -9,18 +9,20 @@ namespace {{PROJECT_NAME}}.Skills;
 /// <summary>
 /// Provides HTTP-based automation functions for API test scenarios.
 /// </summary>
-public class ApiSkill
+public class ApiSkill : IApiSkill
 {
     private readonly AiContext _aiContext;
-    private static readonly HttpClient HttpClient = new();
+    private readonly HttpClient _httpClient;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApiSkill"/> class.
     /// </summary>
     /// <param name="aiContext">Shared scenario AI context.</param>
-    public ApiSkill(AiContext aiContext)
+    /// <param name="httpClient">Optional HTTP client; a new instance is created per scenario when not provided.</param>
+    public ApiSkill(AiContext aiContext, HttpClient? httpClient = null)
     {
         _aiContext = aiContext;
+        _httpClient = httpClient ?? new HttpClient();
     }
 
     [KernelFunction("GetRequest")]
@@ -32,7 +34,7 @@ public class ApiSkill
     /// <returns>The response body.</returns>
     public async Task<string> GetRequestAsync([Description("The target URL.")] string url)
     {
-        var response = await HttpClient.GetStringAsync(url);
+        var response = await _httpClient.GetStringAsync(url);
         _aiContext.LastSkillResult = response;
         return response;
     }
@@ -50,7 +52,7 @@ public class ApiSkill
         [Description("JSON body.")] string body)
     {
         var content = new StringContent(body, Encoding.UTF8, "application/json");
-        var response = await HttpClient.PostAsync(url, content);
+        var response = await _httpClient.PostAsync(url, content);
         var result = await response.Content.ReadAsStringAsync();
         _aiContext.LastSkillResult = result;
         return result;

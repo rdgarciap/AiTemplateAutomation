@@ -166,7 +166,8 @@ $packageReferences = @(
 if ($UsePrivatePackages) {
     $packageReferences += @(
     '    <PackageReference Include="Gbm.Automation.Core" Version="1.7.7" />',
-    '    <PackageReference Include="Dapper" Version="2.1.66" />'
+    '    <PackageReference Include="Dapper" Version="2.1.66" />',
+    '    <PackageReference Include="RestSharp" Version="113.0.0" />'
     )
 }
 
@@ -219,6 +220,8 @@ Write-FileSafely -Path (Join-Path $projectRoot "Drivers\DataConnectionSettings.c
 Write-FileSafely -Path (Join-Path $projectRoot "Properties\launchSettings.json") -Content (Get-TemplateContent -RelativePath "Properties\launchSettings.json.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "Skills\BrowserSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\BrowserSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "Skills\ApiSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\ApiSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+Write-FileSafely -Path (Join-Path $projectRoot "Skills\IBrowserSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\IBrowserSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+Write-FileSafely -Path (Join-Path $projectRoot "Skills\IApiSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\IApiSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "Models\DatabaseQueryResultDto.cs") -Content (Get-TemplateContent -RelativePath "Models\DatabaseQueryResultDto.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\OrchestratorCommand.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\OrchestratorCommand.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\AiOrchestratorSteps.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\AiOrchestratorSteps.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
@@ -230,15 +233,25 @@ Write-FileSafely -Path (Join-Path $projectRoot "Features\Sample.feature") -Conte
 $hooksTemplate = if ($IncludeDatabase) { "Hooks\TestLifecycleHooks.database.cs.template" } else { "Hooks\TestLifecycleHooks.cs.template" }
 Write-FileSafely -Path (Join-Path $projectRoot "Hooks\TestLifecycleHooks.cs") -Content (Get-TemplateContent -RelativePath $hooksTemplate -Tokens $tokens) -AllowOverwrite:$Force
 
+Write-FileSafely -Path (Join-Path $projectRoot "Hooks\KernelFactory.cs") -Content (Get-TemplateContent -RelativePath "Hooks\KernelFactory.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+
+$skillRegistryTemplate = if ($IncludeDatabase) { "Hooks\SkillRegistry.database.cs.template" } elseif ($UsePrivatePackages) { "Hooks\SkillRegistry.private.cs.template" } else { "Hooks\SkillRegistry.cs.template" }
+Write-FileSafely -Path (Join-Path $projectRoot "Hooks\SkillRegistry.cs") -Content (Get-TemplateContent -RelativePath $skillRegistryTemplate -Tokens $tokens) -AllowOverwrite:$Force
+
 if ($UsePrivatePackages) {
     Write-FileSafely -Path (Join-Path $projectRoot "Drivers\Aws\AwsClientFactory.cs") -Content (Get-TemplateContent -RelativePath "Drivers\Aws\AwsClientFactory.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "Drivers\Aws\SecretsManagerWrapper.cs") -Content (Get-TemplateContent -RelativePath "Drivers\Aws\SecretsManagerWrapper.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Hooks\AwsBeforeTestRun.cs") -Content (Get-TemplateContent -RelativePath "Hooks\AwsBeforeTestRun.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "Tests\AwsConnectionTest.cs") -Content (Get-TemplateContent -RelativePath "Tests\AwsConnectionTest.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Skills\RestApiSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\RestApiSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Skills\IRestApiSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\IRestApiSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 }
 
 if ($IncludeDatabase) {
     Write-FileSafely -Path (Join-Path $projectRoot "Skills\DatabaseSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\DatabaseSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "Skills\SchemaInspectionSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\SchemaInspectionSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Skills\IDatabaseSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\IDatabaseSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
+    Write-FileSafely -Path (Join-Path $projectRoot "Skills\ISchemaInspectionSkill.cs") -Content (Get-TemplateContent -RelativePath "Skills\ISchemaInspectionSkill.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\DatabaseStepDefinitions.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\DatabaseStepDefinitions.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
     Write-FileSafely -Path (Join-Path $projectRoot "StepDefinitions\SchemaInspectionStepDefinitions.cs") -Content (Get-TemplateContent -RelativePath "StepDefinitions\SchemaInspectionStepDefinitions.cs.template" -Tokens $tokens) -AllowOverwrite:$Force
 }

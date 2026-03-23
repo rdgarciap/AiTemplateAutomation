@@ -1,5 +1,8 @@
+// <copyright file="TestLifecycleHooks.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
 using {{PROJECT_NAME}}.Drivers;
-using {{PROJECT_NAME}}.Skills;
 using Microsoft.SemanticKernel;
 using Reqnroll;
 using Reqnroll.BoDi;
@@ -24,7 +27,7 @@ public class TestLifecycleHooks
     }
 
     /// <summary>
-    /// Builds and registers scenario services before each test scenario.
+    /// Builds and registers all scenario services before each test scenario.
     /// </summary>
     [BeforeScenario]
     public void SetupScenario()
@@ -35,33 +38,10 @@ public class TestLifecycleHooks
         _container.RegisterInstanceAs(config);
         _container.RegisterInstanceAs(aiContext);
 
-        var builder = Kernel.CreateBuilder();
-        if (config.AiMode.Equals("azure", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.AddAzureOpenAIChatCompletion(
-                deploymentName: config.AzureDeployment,
-                endpoint: config.AzureEndpoint,
-                apiKey: config.AzureApiKey,
-                modelId: config.AzureModelId);
-        }
-        else
-        {
-            builder.AddOpenAIChatCompletion(
-                modelId: config.OpenAiModelId,
-                apiKey: config.OpenAiApiKey);
-        }
-
-        var kernel = builder.Build();
+        var kernel = KernelFactory.Build(config);
         _container.RegisterInstanceAs(kernel);
 
-        var browserSkill = new BrowserSkill(aiContext);
-        var apiSkill = new ApiSkill(aiContext);
-
-        kernel.ImportPluginFromObject(browserSkill, "Browser");
-        kernel.ImportPluginFromObject(apiSkill, "Api");
-
-        _container.RegisterInstanceAs(browserSkill);
-        _container.RegisterInstanceAs(apiSkill);
+        SkillRegistry.RegisterCoreSkills(kernel, aiContext, _container);
     }
 
     /// <summary>

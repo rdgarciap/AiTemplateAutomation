@@ -9,14 +9,30 @@ namespace {{PROJECT_NAME}}.Drivers;
 /// </summary>
 public class AwsSessionValidator
 {
-    private static bool _sessionValidated = false;
-    private static readonly object _lock = new object();
+    private static readonly Lazy<AwsSessionValidator> _instance =
+        new(() => new AwsSessionValidator(AwsCredentialsProvider.Instance), LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private readonly AwsCredentialsProvider _credentialsProvider;
+    private bool _sessionValidated = false;
+    private readonly object _lock = new object();
+
+    /// <summary>Gets the singleton instance of <see cref="AwsSessionValidator"/>.</summary>
+    public static AwsSessionValidator Instance => _instance.Value;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AwsSessionValidator"/> class.
+    /// </summary>
+    /// <param name="credentialsProvider">Provider used to resolve AWS credentials.</param>
+    public AwsSessionValidator(AwsCredentialsProvider credentialsProvider)
+    {
+        _credentialsProvider = credentialsProvider;
+    }
 
     /// <summary>
     /// Validates the current AWS session by calling STS GetCallerIdentity.
     /// </summary>
     /// <returns><see langword="true"/> when the session is valid; otherwise, <see langword="false"/>.</returns>
-    public static async Task<bool> ValidateSessionAsync()
+    public async Task<bool> ValidateSessionAsync()
     {
         lock (_lock)
         {
@@ -45,7 +61,7 @@ public class AwsSessionValidator
                 return false;
             }
 
-            var credentials = AwsCredentialsProvider.GetCredentials();
+            var credentials = _credentialsProvider.GetCredentials();
             using var stsClient = new AmazonSecurityTokenServiceClient(credentials);
             var response = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
@@ -91,7 +107,7 @@ public class AwsSessionValidator
     /// <summary>
     /// Resets the cached validation flag.
     /// </summary>
-    public static void ResetValidation()
+    public void ResetValidation()
     {
         lock (_lock)
         {
@@ -100,10 +116,10 @@ public class AwsSessionValidator
     }
 
     /// <summary>
-    /// Gets a value indicating whether the session has already been validated.
+    /// Gets a value indicating whether the session has already been validated in this run.
     /// </summary>
-    /// <returns><see langword="true"/> when the session was validated in this run; otherwise, <see langword="false"/>.</returns>
-    public static bool IsSessionValidated()
+    /// <returns><see langword="true"/> when the session was validated; otherwise, <see langword="false"/>.</returns>
+    public bool IsSessionValidated()
     {
         lock (_lock)
         {

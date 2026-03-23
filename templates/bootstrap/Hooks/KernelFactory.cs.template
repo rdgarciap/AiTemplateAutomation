@@ -1,0 +1,41 @@
+// <copyright file="KernelFactory.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using {{PROJECT_NAME}}.Drivers;
+using Microsoft.SemanticKernel;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Creates configured <see cref="Kernel"/> instances from application settings.
+/// </summary>
+public static class KernelFactory
+{
+    /// <summary>
+    /// Builds a <see cref="Kernel"/> using the AI provider specified in <paramref name="config"/>.
+    /// </summary>
+    /// <param name="config">Application configuration driver providing AI endpoint and credential settings.</param>
+    /// <returns>A ready-to-use <see cref="Kernel"/> instance.</returns>
+    public static Kernel Build(ConfigurationDriver config)
+    {
+        var builder = Kernel.CreateBuilder();
+
+        if (config.AiMode.Equals("azure", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.AddAzureOpenAIChatCompletion(
+                deploymentName: config.AzureDeployment,
+                endpoint: config.AzureEndpoint,
+                apiKey: config.AzureApiKey,
+                modelId: config.AzureModelId);
+        }
+        else
+        {
+            builder.AddOpenAIChatCompletion(
+                modelId: config.OpenAiModelId,
+                apiKey: config.OpenAiApiKey);
+        }
+
+        return builder.Build();
+    }
+}

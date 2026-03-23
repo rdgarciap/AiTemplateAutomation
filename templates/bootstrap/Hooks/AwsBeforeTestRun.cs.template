@@ -1,0 +1,36 @@
+// <copyright file="AwsBeforeTestRun.cs" company="GBM">
+// GBM GRUPO BURSÁTIL MEXICANO, S.A DE C.V., CASA DE BOLSA
+// </copyright>
+
+using {{PROJECT_NAME}}.Drivers;
+using Reqnroll;
+
+namespace {{PROJECT_NAME}}.Hooks;
+
+/// <summary>
+/// Validates AWS session availability once before any test in the run executes.
+/// Failures produce an early, descriptive error rather than a cryptic SDK exception mid-test.
+/// </summary>
+[Binding]
+public static class AwsBeforeTestRun
+{
+    /// <summary>
+    /// Runs a single STS GetCallerIdentity check before the first test scenario.
+    /// Throws <see cref="InvalidOperationException"/> when no valid AWS session is found.
+    /// </summary>
+    /// <returns>A task that completes when AWS session validation has finished.</returns>
+    [BeforeTestRun]
+    public static async Task ValidateAwsSessionAsync()
+    {
+        var validator = new AwsSessionValidator(AwsCredentialsProvider.Instance);
+        var isValid = await validator.ValidateSessionAsync();
+
+        if (!isValid)
+        {
+            var profile = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "<not set>";
+            throw new InvalidOperationException(
+                $"AWS session is not available. Run: aws sso login --profile {profile}" +
+                $"{Environment.NewLine}See docs/AWS_SSO_Quick_Checklist.md for full troubleshooting steps.");
+        }
+    }
+}

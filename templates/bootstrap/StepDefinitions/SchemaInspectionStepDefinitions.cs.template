@@ -16,7 +16,7 @@ namespace {{PROJECT_NAME}}.StepDefinitions;
 [Binding]
 public class SchemaInspectionStepDefinitions
 {
-    private readonly SchemaInspectionSkill _schemaSkill;
+    private readonly ISchemaInspectionSkill _schemaSkill;
     private readonly AiContext _aiContext;
 
     /// <summary>
@@ -24,7 +24,7 @@ public class SchemaInspectionStepDefinitions
     /// </summary>
     /// <param name="schemaSkill">Schema inspection skill used to query catalog views.</param>
     /// <param name="aiContext">Shared scenario AI context.</param>
-    public SchemaInspectionStepDefinitions(SchemaInspectionSkill schemaSkill, AiContext aiContext)
+    public SchemaInspectionStepDefinitions(ISchemaInspectionSkill schemaSkill, AiContext aiContext)
     {
         _schemaSkill = schemaSkill;
         _aiContext = aiContext;
