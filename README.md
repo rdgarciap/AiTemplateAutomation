@@ -1,7 +1,7 @@
-﻿# DemoFinancialServicesQA — Paquete Documental del Template
+﻿# AiTemplateAutomation — Paquete Documental del Template
 
 Este repositorio contiene la especificacion documental para construir el template
-`<ProjectName>` (por defecto `DemoFinancialServicesQA`), un framework BDD de automatizacion QA con IA basado en
+`<ProjectName>` (por defecto `AiTemplateAutomation`), un framework BDD de automatizacion QA con IA basado en
 .NET 8, Semantic Kernel, Reqnroll y NUnit.
 
 En el estado actual del workspace, el repositorio actua como **paquete de prompts y guias**.
@@ -13,7 +13,7 @@ La forma operativa recomendada para materializar esa salida es ejecutar [bootstr
 **Stack objetivo:** .NET 8 · Semantic Kernel · Reqnroll (BDD) · NUnit  
 **Salida objetivo:** `src/<ProjectName>/`
 
-> Nota: `DemoFinancialServicesQA` es el nombre por defecto del template.
+> Nota: `AiTemplateAutomation` es el nombre por defecto del template.
 > Para generar un proyecto con otro nombre, usa `-ProjectName` en el bootstrap.
 
 ---
@@ -125,7 +125,7 @@ Usa [prompts/00_Agent_Execution_Plan.md](prompts/00_Agent_Execution_Plan.md) com
 
 El bootstrap debe producir, como minimo, el archivo `src/<ProjectName>/<ProjectName>.csproj` y su carpeta asociada.
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/DemoFinancialServicesQA.csproj](src/DemoFinancialServicesQA/DemoFinancialServicesQA.csproj).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/AiTemplateAutomation.csproj](src/AiTemplateAutomation/AiTemplateAutomation.csproj).
 
 Ruta objetivo: `src/<ProjectName>/`.
 
@@ -133,7 +133,7 @@ Ruta objetivo: `src/<ProjectName>/`.
 
 Cuando la salida exista, edita `src/<ProjectName>/appsettings.json` y reemplaza los placeholders.
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/appsettings.json](src/DemoFinancialServicesQA/appsettings.json).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/appsettings.json](src/AiTemplateAutomation/appsettings.json).
 
 ```json
 ```json
@@ -175,7 +175,7 @@ dotnet test --configuration Release
 
 Abre `src/<ProjectName>/Features/Sample.feature` y agrega.
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/Features/Sample.feature](src/DemoFinancialServicesQA/Features/Sample.feature).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/Features/Sample.feature](src/AiTemplateAutomation/Features/Sample.feature).
 
 ```gherkin
 Scenario: Mi primer test con IA

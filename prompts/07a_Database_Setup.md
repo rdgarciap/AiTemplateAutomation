@@ -90,7 +90,7 @@ Busca `Gbm.Automation.Core` y anota la versiÓn mÁs reciente.
 
 Archivo: `src/<ProjectName>/<ProjectName>.csproj`
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/DemoFinancialServicesQA.csproj](src/DemoFinancialServicesQA/DemoFinancialServicesQA.csproj).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/AiTemplateAutomation.csproj](src/AiTemplateAutomation/AiTemplateAutomation.csproj).
 
 ```xml
 <PackageReference Include="Gbm.Automation.Core" Version="1.7.7" />
@@ -104,7 +104,7 @@ Reemplaza `1.7.7` por la versiÓn real que encontraste en el paso anterior.
 
 El template incluye una cadena dummy en `src/<ProjectName>/appsettings.json`.
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/appsettings.json](src/DemoFinancialServicesQA/appsettings.json).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/appsettings.json](src/AiTemplateAutomation/appsettings.json).
 
 ```json
 

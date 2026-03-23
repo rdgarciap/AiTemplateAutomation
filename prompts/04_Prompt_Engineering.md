@@ -58,7 +58,7 @@ La temperatura por defecto es `0.0`.
 
 El template debe vivir en `src/<ProjectName>/Prompts/orchestrator.skprompt.txt` y leerse desde disco en runtime.
 
-Ejemplo con nombre por defecto: [src/DemoFinancialServicesQA/Prompts/orchestrator.skprompt.txt](src/DemoFinancialServicesQA/Prompts/orchestrator.skprompt.txt).
+Ejemplo con nombre por defecto: [src/AiTemplateAutomation/Prompts/orchestrator.skprompt.txt](src/AiTemplateAutomation/Prompts/orchestrator.skprompt.txt).
 
 Variables minimas:
 

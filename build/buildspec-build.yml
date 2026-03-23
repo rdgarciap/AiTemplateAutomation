@@ -19,7 +19,7 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: DemoFinancialServicesQA
+    PROJECT_NAME: {{PROJECT_NAME}}
   # VSTS_GITHUB_ACCESS_KEY se expone como variable de entorno al proceso de build.
   # NuGet.Config lo lee directamente con la sintaxis %VSTS_GITHUB_ACCESS_KEY%
   # sin necesidad de sustitución manual con sed.

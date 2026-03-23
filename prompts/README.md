@@ -1,6 +1,6 @@
 ﻿# Prompts — Mapa de Lectura
 
-Este directorio contiene la especificacion documental del template `<ProjectName>` (por defecto `DemoFinancialServicesQA`).
+Este directorio contiene la especificacion documental del template `<ProjectName>` (por defecto `AiTemplateAutomation`).
 
 ## Tipos de documento
 

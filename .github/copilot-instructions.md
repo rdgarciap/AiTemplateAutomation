@@ -1,4 +1,4 @@
-# Copilot Instructions — DemoFinancialServicesQA
+# Copilot Instructions — AiTemplateAutomation
 
 ## C# Code Style & StyleCop Compliance
 
@@ -20,7 +20,7 @@ All `.cs` files must follow this exact structure:
 using System;                  // ← using directives ALWAYS outside the namespace (SA1200)
 using Third.Party.Namespace;
 
-namespace DemoFinancialServicesQA.SubFolder;  // ← file-scoped namespace (no braces)
+namespace AiTemplateAutomation.SubFolder;  // ← file-scoped namespace (no braces)
 
 /// <summary>
 /// One-sentence description of what this class does.

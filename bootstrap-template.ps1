@@ -5,13 +5,13 @@
 
 .DESCRIPTION
     Crea la solucion, el proyecto .NET, la estructura de carpetas y los archivos minimos
-    para el template (por defecto DemoFinancialServicesQA). Opcionalmente ejecuta restore y build.
+    para el template (por defecto AiTemplateAutomation). Opcionalmente ejecuta restore y build.
 
     El script esta pensado como entrypoint unico para agentes o desarrolladores que
     necesiten materializar el template sin recorrer manualmente todos los prompts.
 
 .PARAMETER ProjectName
-    Nombre del proyecto y de la solucion a generar. Por defecto: DemoFinancialServicesQA.
+    Nombre del proyecto y de la solucion a generar. Por defecto: AiTemplateAutomation.
 
 .PARAMETER Force
     Sobrescribe archivos generados si ya existen.
@@ -28,7 +28,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$ProjectName = "DemoFinancialServicesQA",
+    [string]$ProjectName = "AiTemplateAutomation",
     [switch]$Force,
     [switch]$SkipRestore,
     [switch]$UsePrivatePackages,
