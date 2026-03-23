@@ -142,7 +142,7 @@ public class SchemaInspectionSkill : ISchemaInspectionSkill
     {
         var p = new DynamicParameters();
         p.Add("TableName", tableName);
-        p.Add("Schema", (object?)schema ?? DBNull.Value);
+        p.Add("Schema", schema);
         return p;
     }
 }

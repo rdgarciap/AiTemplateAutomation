@@ -2,6 +2,7 @@ using Dapper;
 using {{PROJECT_NAME}}.Drivers;
 using {{PROJECT_NAME}}.Models;
 using {{PROJECT_NAME}}.Skills;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Reqnroll;
 
@@ -16,16 +17,19 @@ public class DatabaseStepDefinitions
     private const string LastDatabaseResultDtoKey = "LastDatabaseResultDto";
 
     private readonly DatabaseSkill _dbSkill;
+    private readonly ISchemaInspectionSkill _schemaSkill;
     private readonly AiContext _aiContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DatabaseStepDefinitions"/> class.
     /// </summary>
     /// <param name="dbSkill">Database skill used to execute commands.</param>
+    /// <param name="schemaSkill">Schema inspection skill used for index guard checks.</param>
     /// <param name="aiContext">Shared scenario AI context.</param>
-    public DatabaseStepDefinitions(DatabaseSkill dbSkill, AiContext aiContext)
+    public DatabaseStepDefinitions(DatabaseSkill dbSkill, ISchemaInspectionSkill schemaSkill, AiContext aiContext)
     {
         _dbSkill = dbSkill;
+        _schemaSkill = schemaSkill;
         _aiContext = aiContext;
     }
 
@@ -57,6 +61,25 @@ public class DatabaseStepDefinitions
     }
 
     /// <summary>
+    /// Verifies that the specified columns belong to at least one index on the given table,
+    /// then executes the SQL query with parameters. Skips the scenario if any column is not indexed.
+    /// </summary>
+    /// <param name="query">SQL query text.</param>
+    /// <param name="tableName">Table name used to inspect indexes before executing.</param>
+    /// <param name="columnsCsv">Comma-separated column names that must be covered by an index.</param>
+    /// <param name="parameters">Reqnroll table containing parameter name/value pairs.</param>
+    /// <returns>A task that completes when the query finishes.</returns>
+    [When(@"I execute the SQL query ""(.*)"" on table ""(.*)"" with index guard on ""(.*)"" and parameters")]
+    public async Task WhenIExecuteTheSqlQueryWithIndexGuardAndParametersAsync(
+        string query, string tableName, string columnsCsv, Reqnroll.DataTable parameters)
+    {
+        await GuardIndexedColumnsAsync(tableName, columnsCsv);
+        var result = await _dbSkill.ExecuteQueryAsync(query, BuildDynamicParameters(parameters));
+        _aiContext.LastSkillResult = result;
+        _aiContext.SharedData[LastDatabaseResultDtoKey] = DatabaseQueryResultDto.FromJson(result);
+    }
+
+    /// <summary>
     /// Asserts that the query returned at least the requested number of rows.
     /// </summary>
     /// <param name="minRows">Minimum expected row count.</param>
@@ -75,6 +98,31 @@ public class DatabaseStepDefinitions
         _aiContext.SharedData[LastDatabaseResultDtoKey] = fallbackDto;
 
         Assert.That(fallbackDto.Count, Is.GreaterThanOrEqualTo(minRows));
+    }
+
+    private async Task GuardIndexedColumnsAsync(string tableName, string columnsCsv)
+    {
+        var indexJson = await _schemaSkill.GetTableIndexesAsync(tableName);
+        var indexes = JToken.Parse(indexJson) is JArray arr
+            ? arr.OfType<JObject>().ToList()
+            : new List<JObject>();
+
+        var columns = columnsCsv.Split(',').Select(c => c.Trim()).ToList();
+
+        var indexedKeyColumns = indexes
+            .SelectMany(i => i["keyColumns"]?.Values<string?>() ?? Enumerable.Empty<string?>())
+            .Where(c => c is not null)
+            .Select(c => c!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var notIndexed = columns.Where(c => !indexedKeyColumns.Contains(c)).ToList();
+
+        if (notIndexed.Any())
+        {
+            Assert.Ignore(
+                $"Consulta omitida: las columnas [{string.Join(", ", notIndexed)}] no forman parte de " +
+                "ningún índice en la tabla. Agrega un índice que cubra estas columnas antes de ejecutar esta consulta.");
+        }
     }
 
     private static DynamicParameters BuildDynamicParameters(Reqnroll.DataTable table)
